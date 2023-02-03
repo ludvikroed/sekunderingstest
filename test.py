@@ -1,173 +1,472 @@
-from cgi import test
 import streamlit as st
+import xmltodict
+import pandas as pd
 import time
+import requests
 
-import csv
-test = st.text_input('Skriv  til løper 1:')
+def løpe_i_dag():
+    x = st.session_state["løper_x"]
+    playerdata[x]['Id']
+    st.session_state["løpe_id"] = playerdata[x]['Id']
+    url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(playerdata[x]['Id'])
+    st.session_state["url"] = url
+    response = requests.get(st.session_state["url"])
+    xml_content = response.content
+    data_dict = xmltodict.parse(xml_content)
 
- 
-with open('Database.csv','a', newline='') as f:
-    writer = csv.writer(f)
-    writer.writerow(test)
+    st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
+    st.session_state["uploaded_file"] = 1
+    st.session_state["slutt_å_hvise_valg"] = True
 
-overskrift = st.empty()
-overskrift1 = st.empty()
-overskrift2 = st.empty()
 
-with overskrift:
-  st.title('Sekunderingsverktøy')
+send_starttider = 0
 
-with overskrift1:
-  st.write("Når du skriver inn starttider må du skrive: timer:minutter:sekunder:sekunder Eksempell: 12:43:15")
+try:
+	if send:
+		st.session_state["uploaded_file"] = 1
+except:
+	mongo = "monog"
 
-with overskrift2:
-  st.write("Det er viktig at du skriver starttidene riktig ellers vil ikke systemet fungere sånn det skal. Det er også viktig at du skriver starttidene i stigene rekkefølge.  Altså sånn at løper en starter først og løper to starter som nr.2")
-forklaring_starter = st.empty()
-slider = st.empty()
+if "uploaded_file" not in st.session_state:
+	st.session_state["uploaded_file"] = 0
 
-navn1 = st.empty()
-starttid1 = st.empty()
-navn2 = st.empty()
-starttid2 = st.empty()
-navn3 = st.empty()
-starttid3 = st.empty()
-navn4 = st.empty()
-starttid4 = st.empty()
-navn5 = st.empty()
-starttid5 = st.empty()
-navn6 = st.empty()
-starttid6 = st.empty()
+if "antall_løpere" not in st.session_state:
+	st.session_state.antall_løpere = 0
 
-send_starttider1 = st.empty()
+st.title('Sekunderingsverktøy')
 
-knapp_løper_1 = st.empty()
-knapp_løper_2 = st.empty()
-knapp_løper_3 = st.empty()
-knapp_løper_4 = st.empty()
-knapp_løper_5 = st.empty()
 
-send_tider = st.empty()
+cols = ["Startnummer:","Fornavn:", "Etternavn:", "Klasse:", "Starttid:"]
+rows = []
+startliste_row = []
+
+hvis_løpere = 1
+
+if "hvis_starttider" not in st.session_state:
+    if st.session_state["uploaded_file"] == 0:
+        valg_allterntiver = ["Bruk knapper(annbelfalt)", "Link", "Fil", "Manuell innfylling"]
+        valgmåte = st.radio("Velg hvordan du vil velge løpere:", options=valg_allterntiver)
+        if valgmåte == "Bruk knapper(annbelfalt)":
+            url_api = "https://events.eqtiming.com/api/Events?query=&dateFrom=2023-01-01+00%3A00&dateTo=2023-03-31+23%3A59&organizationId=0&regionIds=&levelIds=&sportIds=&take=1500&dateSort=true&desc=false&onlyValidated=false&onlyshowfororganizer=false&organizerIds="
+            payload={}
+            headers = {
+            'authority': 'events.eqtiming.com',
+            'accept': 'application/json, text/javascript, */*; q=0.01',
+            'accept-language': 'nb-NO,nb;q=0.9,no;q=0.8,nn;q=0.7,en-US;q=0.6,en;q=0.5',
+            'content-type': 'application/json',
+            'cookie': 'twk_uuid_585d00c673e3d85bf1414db3=%7B%22uuid%22%3A%221.Swn9202hTjHLCRCPnaRWCDZBCXhRJXZDHQ0NqPyZoVHRzWu3w8flOvf8J9MWtUO5tiMSWuyApuL32BZkA1or5HMLO4rvXUt0S1mm9jaM1gbkyRzMymSiP%22%2C%22version%22%3A3%2C%22domain%22%3A%22eqtiming.com%22%2C%22ts%22%3A1673110787300%7D; cookieconsent_status=dismiss; i18next=nb-NO; EQEventList-1929405894=%7B%22focus%22%3Anull%2C%22from%22%3Anull%2C%22to%22%3Anull%2C%22sportIds%22%3Anull%2C%22query%22%3A%22%22%7D',
+            'eqlivelocale': 'nb-NO',
+            'if-none-match': '"d065b9b5-e902-4189-b5de-2e2072ba08f7"',
+            'referer': 'https://events.eqtiming.com/eventlist?fullscreen=true&fullscreen=true&theme=eqtiming&locale=nb_NO',
+            'sec-ch-ua': '"Not_A Brand";v="99", "Google Chrome";v="109", "Chromium";v="109"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+            'x-requested-with': 'XMLHttpRequest'
+            }
+            r = requests.get(url_api, headers=headers)
+            playerdata = r.json()
+
+            current_date = time.strftime("%Y-%m-%d")
+            x = 0
+            current_date = "2023-02-04"
+            st.write("Renn i dag:")
+            for id in playerdata:
+                start_time = playerdata[x]['Starttime']
+                start_time = start_time.split("T")
+                if start_time[0] == current_date:
+                    st.session_state["løper_x"] = x
+                    st.button(playerdata[x]['Name'], on_click=løpe_i_dag)            
+                x += 1
+
+        if valgmåte == "Fil":
+            st.write("Trykk på pilen øverst i venste hjørnet å velg Sekundering-med-fil")
+        if valgmåte == "Manuell innfylling":
+            st.write("Trykk på pilen øverst i venste hjørnet å velg Sekundering-med-manuell-innfylling")
+
+    hvis_løpere = 0
+
+    if "resatt" not in st.session_state:
+        if st.session_state["uploaded_file"] == 0:
+            if valgmåte == "Link":
+                if st.session_state["uploaded_file"] == 0:
+                    st.write("Kopier linken fra ditt renn på eqtiming")
+                    st.write("Gå inn på rennet ditt å trykk på deltakere. Derretter kopierer du linken og limer den inn her:")
+                    url_input = st.text_input("Lim inn linken fra EQtiming rennet du skal sekundere løpere fra her:")
+                    send = st.button("Send")
+                    if send:
+                        numbers = url_input.split("/")[-1].split("#")[0]
+                        test = url_input.split("/")
+                        test_to = url_input.split(".")
+                        if send:
+                            if url_input == "https://www.eqtiming.com/no/":
+                                st.write("Det ser ut som at du bare har lakt inn linken til EQtiming sin forside. Du må legge inn linken til rennet du skal være med på.")
+                            elif url_input == "":
+                                st.write("Du må legge inn en link")
+                            elif test[1] == "live.eqtiming.com" or test[2] == "live.eqtiming.com" or test[3] == "live.eqtiming.com":
+                                if int(numbers):
+                                    try:
+                                        st.session_state["løpe_id"] = numbers
+                                        url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(numbers)
+                                        st.session_state["url"] = url
+                                        response = requests.get(st.session_state["url"])
+                                        xml_content = response.content
+                                        data_dict = xmltodict.parse(xml_content)
+
+                                        st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
+                                        st.session_state["uploaded_file"] = 1
+                                        
+                                    except:
+                                        st.write("det var noe som gikk feil med nedlastning av startliste")
+                                    st.experimental_rerun()
+                                else:
+                                    "Programmet greier ikke å lese deltakerene fra linken du har lagt til. Det kan være at EQtiming har endre oppsettet sitt med hvoran man laster ned startlister."
+                            else:
+                                "Det ser ikke ut som at linken du har lagdt ikke er fra inn er fra EQtiming. Hvis dette ikke er riktig kan du sende en meldig til Ludvik Blichfeldt Roed på messenger. "
+
+
+    if st.session_state["uploaded_file"] == 1:
+        if "hvis_starttider" not in st.session_state:
+            tab2, tab3 = st.tabs(["Velg løpere", "Startlister"])
+		
+
+    if st.session_state["uploaded_file"] == 1:
+        if "resatt" not in st.session_state:
+            if "Lister_er_lagd" not in st.session_state:
+                x = 0
+                a = 0
+                siste_klasse = 0
+            
+                klasser_dict = {'Startliste:': ''}
+                klasser_dict_to = {'Velg klasse her': '', 'Startliste:': ''}
+
+                rows = pd.DataFrame(columns=cols)
+                startliste_row = pd.DataFrame(columns=cols)
+
+                for i in(st.session_state["løpere_data_list"]):
+                    løper = (st.session_state["løpere_data_list"][x])
+                    fornavn = (løper['@fornavn'])
+                    etternavn = (løper['@etternavn'])
+                    klasse = (løper['@klasse'])
+                    starttid = (løper['@starttid'])
+                    startnr = (løper['@startno'])
+
+
+                    if klasse != siste_klasse:
+                        if siste_klasse != 0:
+                            klasser_dict[siste_klasse] = siste_klasse   
+                            klasser_dict_to[siste_klasse] = siste_klasse   
+                            df = pd.DataFrame(rows, columns=cols)
+                            csvfile = siste_klasse + '.csv'
+                            
+                            st.session_state[csvfile] = df
+
+                            rows = []
+                            rows = pd.DataFrame(columns=cols)
+                            a += 1
+
+                    rows_ny = pd.DataFrame({"Startnummer:": startnr,
+                                            "Fornavn:": fornavn,
+                                            "Etternavn:": etternavn,
+                                            "Klasse:": klasse,
+                                            "Starttid:": starttid},
+                                            index=["løper"])
+                    
+                    startliste_row_ny = pd.DataFrame({"Startnummer:": startnr,
+                                                        "Fornavn:": fornavn,
+                                                        "Etternavn:": etternavn,
+                                                        "Klasse:": klasse,
+                                                        "Starttid:": starttid},
+                                                        index=["løper"])
+
+                    rows = pd.concat([rows, rows_ny])
+                    
+                    startliste_row = pd.concat([startliste_row, startliste_row_ny])
+                    siste_klasse = klasse
+                    x += 1
+                klasser_dict[siste_klasse] = siste_klasse   
+                klasser_dict_to[siste_klasse] = siste_klasse   
+                klasser_dict[siste_klasse] = siste_klasse   
+                klasser_dict_to[siste_klasse] = siste_klasse   
+                df = pd.DataFrame(rows, columns=cols)
+                csvfile = siste_klasse + '.csv'
+                
+                st.session_state[csvfile] = df
+
+                rows = pd.DataFrame(columns=cols)
+                a += 1
+
+
+                startliste = pd.DataFrame(startliste_row, columns=cols)
+                df = pd.DataFrame(startliste_row, columns=cols)
+                st.session_state["Startliste:.csv"] = df
+                st.session_state["klasser_dict_to"] = klasser_dict_to
+                st.session_state["klasser_dict"] = klasser_dict
+                st.session_state["Lister_er_lagd"] = 1
+
+        with tab3:
+            klasser_dict_to = st.session_state["klasser_dict_to"]
+
+            klasse_som_sekunderes = st.selectbox('Velg hvilken klasse du vil se', klasser_dict_to)
+
+            if klasse_som_sekunderes != 'Velg klasse her':
+                df = st.session_state[klasse_som_sekunderes + '.csv']
+                st.dataframe(df)
+        if "hvis_starttider" not in st.session_state:
+            with tab2:
+                if st.session_state.antall_løpere >= 1:
+                    antall_løpere = st.session_state.antall_løpere
+                    n = 1
+                    st.subheader("Her er løperne du har valgt for å sekundere: ")
+                    st.write('Det er skjer noen ganger at den siste løperen du har valgt ikke kommer opp her. Hvis du vil se alle løperene du har valgt trykker du på strekene øverst i venste hjørne. Derretter "rerun" dette burde fikse problemet')
+                    if st.session_state.antall_løpere >= 2:
+                        send_starttider = st.button("Start å sekundere løpere")
+                        if send_starttider:
+                            st.session_state["hvis_starttider"] = 1
+
+                    if "rerun" in st.session_state:
+                        st.write("Du har valgt maks antall av løpere for å sekundere trykk på knappen for å starte å sekundere.")
+                    for i in range(antall_løpere):
+                        if n == 1:
+                            løper = "en"
+                        elif n == 2:
+                            løper = "to"
+                        elif n == 3:
+                            løper = "tre"
+                        elif n == 4:
+                            løper = "fire"
+                        elif n == 5:
+                            løper = "fem"
+                        elif n == 6:
+                            løper = "seks"
+                        n_str = str(n)
+                        st.subheader("Løper " + n_str + ":")
+                        navn = "løper_" + løper + "_navninput"
+                        starttid = "løper_" + løper + "_startinput"
+
+                        st.write("Navn: " + st.session_state[navn])
+                        st.write("Starttid: " + st.session_state[starttid])
+                        
+                        n += 1
+
+        with tab2:
+            if "rerun" not in st.session_state:
+                klasser_dict = st.session_state["klasser_dict"]
+                klasse_som_sekunderes_en = st.selectbox('Hvis du bare vil sekundere løpere fra en klasse kan du velge hvilken klasse her. Da vil du bare få opp løpere fra den klassen.', klasser_dict)
+                st.session_state["klasse_som_sekunders"] = klasse_som_sekunderes_en
+
+            reader_obj = st.session_state[st.session_state["klasse_som_sekunders"] + '.csv']
+            if "løper_nummer" not in st.session_state:
+                st.session_state["løper_nummer"] = 1
+            if "forrige_løper" not in st.session_state:
+                st.session_state["forrige_løper"] = 1
+
+            count_row = reader_obj.shape[0]
+
+            teller = 0
+
+            for row in range(count_row):
+                k = str(row)
+
+                knapp = k + 'knapp'
+                knapp_id = k + 'knapp'	
+                
+                if "maks_valgt" not in st.session_state:	
+                    startnummer = str(reader_obj["Startnummer:"][teller])
+                    fornavn = str(reader_obj["Fornavn:"][teller])
+                    etternavn = str(reader_obj["Etternavn:"][teller])
+
+                    knapp = st.button(startnummer + " " + fornavn + " " + etternavn)
+
+                    if knapp_id in st.session_state:
+                        st.write(reader_obj["Fornavn:"][teller]  + " " + reader_obj["Etternavn:"][teller] + " er valgt")
+                
+                n = 1
+                if knapp:
+                    if st.session_state["løper_nummer"] == 1:
+                        løper = "en"
+                    elif st.session_state["løper_nummer"] == 2:
+                        løper = "to"
+                    elif st.session_state["løper_nummer"] == 3:
+                        løper = "tre"
+                    elif st.session_state["løper_nummer"] == 4:
+                        løper = "fire"
+                    elif st.session_state["løper_nummer"] == 5:
+                        løper = "fem"
+                    elif st.session_state["løper_nummer"] == 6:
+                        løper = "seks"
+                        
+                    elif st.session_state["løper_nummer"] >= 7:
+                        st.session_state["stop"] = 1
+                        if "rerun" not in st.session_state:
+                            st.session_state["rerun"] = 1
+                            st.experimental_rerun()
+                    
+
+                    if "stop" not in st.session_state:
+                        st.session_state["knapp_for_reset" + løper] = knapp_id
+                        fornavn = reader_obj["Fornavn:"][teller]
+                        etternavn = reader_obj["Etternavn:"][teller]
+                        st.session_state['løper_' + løper + '_navninput'] = fornavn + ' ' + etternavn
+                        st.session_state['løper_' + løper + '_startinput'] = reader_obj["Starttid:"][teller]
+                        st.session_state['løper_' + løper + '_startnr'] = reader_obj["Startnummer:"][teller]
+
+                        st.write(st.session_state['løper_' + løper + '_navninput'], "er valgt")
+                        st.session_state[knapp_id] = 1
+                        
+                        if løper == "en":
+                            st.write("Du har valgt " + løper + " løper. Husk at seks løpere er maks")
+                            st.write("For å starte å sekundere må du velge minst to løpere")
+                            
+                        elif løper == "seks":
+                            st.subheader("Du har valgt maks antall av løpere.")
+                        else:
+                            st.write("Du har valgt " + løper + " løpere. Husk at seks løpere er maks")
+                            st.write("Hvis du ikke vil sekundere flere løpere kan du bla øverst på siden for å starte å sekundere")
+
+                        st.session_state.antall_løpere = st.session_state["løper_nummer"]
+                        if st.session_state["løper_nummer"] == 6:
+                            st.session_state["maks_valgt"] = 1
+
+                        st.session_state["løper_nummer"] = st.session_state["løper_nummer"] + 1
+                teller += 1
+                            
 
 runde_nr = 1
 
-with slider:
-  antall_løpere = st.selectbox("Velg hvor mange løpere du vil sekundere", options=[2, 3, 4, 5, 6])
-  st.session_state.key = antall_løpere
-
-with navn1:
-  løper_en_navninput = st.text_input('Skriv navnet til løper 1:')
-with starttid1:
-  løper_en_startinput = st.text_input('Skriv starttiden til løper 1:')
-
-with navn2:
-  løper_to_navninput = st.text_input('Skriv navnet til løper 2:')
-with starttid2:
-  løper_to_startinput = st.text_input('Skriv starttiden til løper 2:')
-
-with navn3:
-  løper_tre_navninput = st.text_input('Skriv navnet til løper 3:')
-with starttid3:
-  løper_tre_startinput = st.text_input('Skriv starttiden til løper 3:')
-
-with navn4:
-  løper_fire_navninput = st.text_input('Skriv navnet til løper 4:')
-with starttid4:
-  løper_fire_startinput = st.text_input('Skriv starttiden til løper 4:')
-
-with navn5:
-  løper_fem_navninput = st.text_input('Skriv navnet til løper 5:')
-with starttid5:
-  løper_fem_startinput = st.text_input('Skriv starttiden til løper 5:')
-
-with navn6:
-  løper_seks_navninput = st.text_input('Skriv navnet til løper 6:')
-with starttid6:
-  løper_seks_startinput = st.text_input('Skriv starttiden til løper 6:')
-
-if antall_løpere < 3:
-  navn3.empty()
-  starttid3.empty()
-
-if antall_løpere < 4:
-  navn4.empty()
-  starttid4.empty()
-
-if antall_løpere < 5:
-  navn5.empty()
-  starttid5.empty()
-
-if antall_løpere < 6:
-  navn6.empty()
-  starttid6.empty()
-
-with send_tider:
-    send_starttider = st.button('Jeg er ferdig med å fylle ut tider og navn')
-
-if send_starttider:
-  if antall_løpere == 2:
-    if løper_en_navninput == "" or løper_to_navninput == "":
-      st.write('Du må fylle inn navnene til alle løperne')
-    elif løper_en_startinput == "" or løper_to_startinput == "":
-      st.write('Du må fylle inn starttidene til alle løperene')
-    elif løper_en_startinput > løper_to_startinput:
-      st.write('Du må skrive starttidene i stigene rekkefølge')
-    elif løper_en_navninput == løper_to_navninput:
-      st.write('Du har skrevet et navn to ganger')
-    else:
-      st.session_state["starttider"] = 1
-
-  elif antall_løpere == 3:
-    if løper_en_navninput == "" or løper_to_navninput == "" or løper_tre_navninput == "":
-      st.write('Du må fylle inn navnene til alle løperne')
-    elif løper_en_startinput == "" or løper_to_startinput == "" or løper_tre_startinput == "":
-      st.write('Du må fylle inn starttidene til alle løperene')
-    elif løper_en_startinput > løper_to_startinput or løper_en_startinput > løper_tre_startinput or løper_to_startinput > løper_tre_startinput:
-      st.write('Du må skrive starttidene i stigene rekkefølge')
-    elif løper_en_navninput == løper_to_navninput or løper_en_navninput == løper_tre_navninput or løper_to_navninput == løper_tre_navninput:
-      st.write('Du har skrevet et navn to ganger')
-    else:
-      st.session_state["starttider"] = 1
-
-  elif antall_løpere == 4:
-    if løper_en_navninput == "" or løper_to_navninput == "" or løper_tre_navninput == "" or løper_fire_navninput == "":
-      st.write('Du må fylle inn navnene til alle løperne')
-    elif løper_en_startinput == "" or løper_to_startinput == "" or løper_tre_startinput == "" or løper_fire_startinput == "":
-      st.write('Du må fylle inn starttidene til alle løperene')
-    elif løper_en_startinput > løper_to_startinput or løper_en_startinput > løper_tre_startinput or løper_to_startinput > løper_tre_startinput or løper_en_startinput > løper_fire_startinput or løper_to_startinput > løper_fire_startinput or løper_tre_startinput > løper_fire_startinput:
-      st.write('Du må skrive starttidene i stigene rekkefølge')
-    elif løper_en_navninput == løper_to_navninput or løper_en_navninput == løper_tre_navninput or løper_to_navninput == løper_tre_navninput or løper_en_navninput == løper_fire_navninput or løper_to_navninput == løper_fire_navninput or løper_tre_navninput == løper_fire_startinput:
-      st.write('Du har skrevet et navn to ganger')
-    else:
-      st.session_state["starttider"] = 1
-
-  elif antall_løpere == 5:
-    if løper_en_navninput == "" or løper_to_navninput == "" or løper_tre_navninput == "" or løper_fire_navninput == "" or løper_fem_navninput == "":
-      st.write('Du må fylle inn navnene til alle løperne')
-    elif løper_en_startinput == "" or løper_to_startinput == "" or løper_tre_startinput == "" or løper_fire_startinput == "" or løper_fire_startinput == "":
-      st.write('Du må fylle inn starttidene til alle løperene')
-    elif løper_en_startinput > løper_to_startinput or løper_en_startinput > løper_tre_startinput or løper_to_startinput > løper_tre_startinput or løper_en_startinput > løper_fire_startinput or løper_to_startinput > løper_fire_startinput or løper_tre_startinput > løper_fire_startinput or løper_en_startinput > løper_fem_startinput or løper_to_startinput > løper_fem_startinput or løper_tre_startinput > løper_fem_startinput or løper_fire_startinput > løper_fem_startinput:
-      st.write('Du må skrive starttidene i stigene rekkefølge')
-    elif løper_en_navninput == løper_to_navninput or løper_en_navninput == løper_tre_navninput or løper_to_navninput == løper_tre_navninput or løper_en_navninput == løper_fire_navninput or løper_to_navninput == løper_fire_navninput or løper_tre_navninput == løper_fire_startinput or løper_en_navninput == løper_fem_navninput or løper_to_navninput == løper_fem_startinput or løper_tre_navninput == løper_fem_navninput or løper_fire_navninput == løper_fem_navninput:
-      st.write('Du har skrevet et navn to ganger')
-    else:
-      st.session_state["starttider"] = 1
-
-  elif antall_løpere == 6:
-    if løper_en_navninput == "" or løper_to_navninput == "" or løper_tre_navninput == "" or løper_fire_navninput == "" or løper_fem_navninput == "":
-      st.write('Du må fylle inn navnene til alle løperne')
-    elif løper_en_startinput == "" or løper_to_startinput == "" or løper_tre_startinput == "" or løper_fire_startinput == "" or løper_fire_startinput == "":
-      st.write('Du må fylle inn starttidene til alle løperene')
-    elif løper_en_startinput > løper_to_startinput or løper_en_startinput > løper_tre_startinput or løper_to_startinput > løper_tre_startinput or løper_en_startinput > løper_fire_startinput or løper_to_startinput > løper_fire_startinput or løper_tre_startinput > løper_fire_startinput or løper_en_startinput > løper_fem_startinput or løper_to_startinput > løper_fem_startinput or løper_tre_startinput > løper_fem_startinput or løper_fire_startinput > løper_fem_startinput or løper_en_startinput > løper_seks_startinput or løper_to_startinput > løper_seks_startinput or løper_tre_startinput > løper_seks_startinput or løper_fire_startinput > løper_seks_startinput or løper_fire_startinput > løper_seks_startinput or løper_fem_startinput > løper_seks_startinput:
-      st.write('Du må skrive starttidene i stigene rekkefølge')
-    elif løper_en_navninput == løper_to_navninput or løper_en_navninput == løper_tre_navninput or løper_to_navninput == løper_tre_navninput or løper_en_navninput == løper_fire_navninput or løper_to_navninput == løper_fire_navninput or løper_tre_navninput == løper_fire_navninput or løper_en_navninput == løper_fem_navninput or løper_to_navninput == løper_fem_navninput or løper_tre_navninput == løper_fem_navninput or løper_fire_navninput == løper_fem_navninput == løper_en_navninput == løper_seks_navninput or løper_to_navninput == løper_seks_navninput or løper_tre_navninput == løper_seks_navninput or løper_fire_navninput == løper_seks_navninput or løper_fire_navninput == løper_seks_navninput or løper_fem_navninput == løper_seks_navninput:
-      st.write('Du har skrevet et navn to ganger')
-    else:
-      st.session_state["starttider"] = 1
+def regn_fra_sekk_til_min(seconds):
+	if seconds < 60:
+		return "0" + ":" + "0" + ":" + str(seconds)
+	elif seconds < 3600:
+		minutes = seconds // 60
+		remaining_seconds = seconds % 60
+		return "0" + ":" + str(minutes) + ":" + str(remaining_seconds)
+	else:
+		hours = seconds // 3600
+		minutes = (seconds % 3600) // 60
+		remaining_seconds = (seconds % 3600) % 60
+		return str(hours) + ":" + str(minutes) + ":" + str(remaining_seconds)
 
 def regn_starttid(start_tid_input):
-    løper_start_split = start_tid_input.split(":")
-    løper_start_sekunder = int(løper_start_split[0])*3600 + int(løper_start_split[1])*60 + int(løper_start_split[2])
-    return (løper_start_sekunder)
+		løper_start_split = start_tid_input.split(":")
+		løper_start_sekunder = int(løper_start_split[0])*3600 + int(løper_start_split[1])*60 + int(løper_start_split[2])
+		return (løper_start_sekunder)
+
+if send_starttider:
+	løper_en_navninput = st.session_state['løper_en_navninput']
+	løper_to_navninput = st.session_state['løper_to_navninput']
+	løper_en_startinput = st.session_state['løper_en_startinput']
+	løper_to_startinput = st.session_state['løper_to_startinput']
+
+	antall_løpere = st.session_state.antall_løpere
+
+	if st.session_state.antall_løpere >= 3:
+		løper_tre_navninput = st.session_state['løper_tre_navninput']
+		løper_tre_startinput = st.session_state['løper_tre_startinput']
+	
+	if st.session_state.antall_løpere >= 4:
+		løper_fire_navninput = st.session_state['løper_fire_navninput']
+		løper_fire_startinput = st.session_state['løper_fire_startinput']
+
+	if st.session_state.antall_løpere >= 5:
+		løper_fem_navninput = st.session_state['løper_fem_navninput']
+		løper_fem_startinput = st.session_state['løper_fem_startinput']
+	
+	if st.session_state.antall_løpere == 6:
+		løper_seks_navninput = st.session_state['løper_seks_navninput']
+		løper_seks_startinput = st.session_state['løper_seks_startinput']
+
+	def rekkefølge_feil(løperEn, løperTo, løperEnNavn, løperToNavn, løperEnStrNr, løperToStrNr):
+		løper_en_str_nr = løperEnStrNr
+		løper_to_str_nr = løperToStrNr
+		løperEnStrNr = løper_to_str_nr
+		løperToStrNr = løper_en_str_nr
+		løper_en = løperEn
+		løper_to = løperTo
+		løperEn = løper_to
+		løperTo = løper_en
+		løper_enNavn = løperEnNavn
+		løper_toNavn = løperToNavn
+		løperEnNavn = løper_toNavn
+		løperToNavn= løper_enNavn
+		return løperEn, løperTo, løperEnNavn, løperToNavn, løperEnStrNr, løperToStrNr
+
+	if antall_løpere >= 2:
+		if antall_løpere == 1:
+			løper = "en"
+		elif antall_løpere == 2:
+			løper = "to"
+		elif antall_løpere == 3:
+			løper = "tre"
+		elif antall_løpere == 4:
+			løper = "fire"
+		elif antall_løpere == 5:
+			løper = "fem"
+		elif antall_løpere == 6:
+			løper = "seks"
+		
+		n = 1
+		for i in range(antall_løpere):
+			if n == 1:
+				løper = "en"
+				løper_start = regn_starttid(løper_en_startinput)
+			elif n == 2:
+				løper = "to"
+				løper_start = regn_starttid(løper_to_startinput)
+			elif n == 3:
+				løper = "tre"
+				løper_start = regn_starttid(løper_tre_startinput)
+			elif n == 4:
+				løper = "fire"
+				løper_start = regn_starttid(løper_fire_startinput)
+			elif n == 5:
+				løper = "fem"
+				løper_start = regn_starttid(løper_fem_startinput)
+			elif n == 6:
+				løper = "seks"
+				løper_start = regn_starttid(løper_seks_startinput)
+			st.session_state["løper_" + løper + "_start"] = løper_start
+			st.write(løper)
+			st.session_state["løper_" + løper + "_start"]
+			n += 1
+
+		def rekkefølge_feil_en(en, to):
+			if st.session_state["løper_" + en + "_start"] > st.session_state["løper_" + to + "_start"]:
+				st.write(st.session_state['løper_' + to + '_navninput'])
+
+				omregning = rekkefølge_feil(st.session_state["løper_" + en + "_start"], st.session_state["løper_" + to + "_start"], st.session_state["løper_" + en + "_navninput"], st.session_state["løper_" + to + "_navninput"], st.session_state['løper_' + en + '_startnr'], st.session_state['løper_' + to + '_startnr'])
+				st.session_state["løper_" + en + "_start"] = omregning[0]
+				st.session_state["løper_" + to + "_start"] = omregning[1]
+				st.session_state['løper_' + en + '_navninput'] = omregning[2]
+				st.session_state['løper_' + to + '_navninput'] = omregning[3]
+				st.session_state['løper_' + en + '_startnr'] = omregning[4]
+				st.session_state['løper_' + to + '_startnr'] = omregning[5]
+				st.write(st.session_state['løper_' + to + '_navninput'])
+
+		for i in range(5):
+			rekkefølge_feil_en("en", "to")
+			if antall_løpere > 2:
+				rekkefølge_feil_en("en", "tre")
+				rekkefølge_feil_en("to", "tre")
+			if antall_løpere > 3:
+				rekkefølge_feil_en("en", "fire")
+				rekkefølge_feil_en("to", "fire")
+				rekkefølge_feil_en("tre", "fire")
+			if antall_løpere > 4:
+				rekkefølge_feil_en("en", "fem")
+				rekkefølge_feil_en("to", "fem")
+				rekkefølge_feil_en("tre", "fem")
+				rekkefølge_feil_en("fire", "fem")
+			if antall_løpere > 5:
+				rekkefølge_feil_en("en", "seks")
+				rekkefølge_feil_en("to", "seks")
+				rekkefølge_feil_en("tre", "seks")
+				rekkefølge_feil_en("fire", "seks")
+				rekkefølge_feil_en("fem", "seks")
+	st.experimental_rerun()
 
 def løper_passerer(løper_start_tid):
     løper_pa_tid= time.time()
@@ -180,437 +479,639 @@ def regn_forskjell(start_en, start_to):
 
 def regn_negativ_positiv(forskjell):
   if forskjell < 0:
-    bak_foran = 'foran'
+    bak_foran = ' foran '
 
   if forskjell == 0:
-    bak_foran = 'foran'
+    bak_foran = ' foran '
 
   if forskjell > 0:
-    bak_foran = 'bak'
+    bak_foran = ' bak '
 
   return(bak_foran)
 
-if "starttider" in st.session_state:
-  tab1, tab2,  = st.tabs(["Sekundering", "Logg"])
-  overskrift.empty()
-  overskrift1.empty()
-  overskrift2.empty()
-  slider.empty()
-  forklaring_starter.empty()
-  navn1.empty()
-  navn2.empty()
-  navn3.empty()
-  navn4.empty()
-  navn5.empty()
-  navn6.empty()
-  starttid1.empty()
-  starttid2.empty()
-  starttid3.empty()
-  starttid4.empty()
-  starttid5.empty()
-  starttid6.empty()
-  send_starttider1.empty()
-  send_tider.empty()
-
-  if "antall_passeringer" not in st.session_state:
-    st.session_state["antall_passeringer"] =  0
-    antall_passeringer = 0
-
-  if "regning" not in st.session_state:
-    st.session_state["regning"] = 1
-    if antall_løpere >= 2:
-      løper_en_start = regn_starttid(løper_en_startinput)
-      løper_to_start = regn_starttid(løper_to_startinput)
-      st.session_state["løper_en_start"] = løper_en_start  
-      st.session_state["løper_to_start"] = løper_to_start
-    if antall_løpere >= 3: 
-      løper_tre_start = regn_starttid(løper_tre_startinput)
-      st.session_state["løper_tre_start"] = løper_tre_start
-
-    if antall_løpere >= 4:
-      løper_fire_start = regn_starttid(løper_fire_startinput)
-      st.session_state["løper_fire_start"] = løper_fire_start
-
-    if antall_løpere >= 5:
-      løper_fem_start = regn_starttid(løper_fem_startinput)
-      st.session_state["løper_fem_start"] = løper_fem_start
-
-    if antall_løpere == 6:
-      løper_seks_start = regn_starttid(løper_seks_startinput)
-      st.session_state["løper_seks_start"] = løper_seks_start
-    
-
-  with tab1:
-    st.header("Sekundering")
-    st.write('Trykk på navnet til løperen som passerer:')
-
-    if antall_løpere > 1:
-      st.write('')
-      løper_en_knapp = st.button(løper_en_navninput)
-      if løper_en_knapp:
-        løper_en_start = st.session_state["løper_en_start"]
-        passering_løper_en = løper_passerer(løper_en_start)
-        løper_en_navninput, 'har passert'
-        st.session_state["passering_løper_en"] = passering_løper_en
-
-    if antall_løpere >= 2:
-      st.write('')
-      løper_to_knapp = st.button(løper_to_navninput)
-
-      if løper_to_knapp:
-        løper_to_start = st.session_state["løper_to_start"]
-        passering_løper_en = st.session_state["passering_løper_en"]
-
-        passering_løper_to = løper_passerer(løper_to_start)
-        forskjell_på_en_to = regn_forskjell(passering_løper_en, passering_løper_to)
-
-        forskjell_på_en_to = round(forskjell_på_en_to, 1)
-
-        bak_foran = regn_negativ_positiv(forskjell_på_en_to)
-        forskjell_på_en_to = abs(forskjell_på_en_to)
-
-        st.session_state["passering_løper_to"] = passering_løper_to
-
-        løper_to_navninput, "er", forskjell_på_en_to, "sekunder", bak_foran, løper_en_navninput
-
-        if 'løper_to_passeringer' not in st.session_state:
-          st.session_state["løper_to_passeringer"] = 0
-
-        st.session_state["løper_to_passeringer"] = st.session_state["løper_to_passeringer"] + 1
-
-        a = st.session_state.løper_to_passeringer
-        st.session_state[a] = løper_to_navninput, "er", forskjell_på_en_to, "sekunder", bak_foran, løper_en_navninput
-
-    if antall_løpere >= 3:
-      st.write('')
-      løper_tre_knapp = st.button(løper_tre_navninput)
-
-      if løper_tre_knapp:
-        løper_tre_start = st.session_state["løper_tre_start"]
-        passering_løper_en = st.session_state["passering_løper_en"]
-        passering_løper_to = st.session_state["passering_løper_to"]
-
-        passering_løper_tre = løper_passerer(løper_tre_start)
-        st.session_state["passering_løper_tre"] = passering_løper_tre
-
-        forskjell_på_to_tre = regn_forskjell(passering_løper_to, passering_løper_tre)
-        forskjell_på_en_tre = regn_forskjell(passering_løper_en, passering_løper_tre)
-
-        forskjell_på_en_tre = round(forskjell_på_en_tre, 1)
-        forskjell_på_to_tre = round(forskjell_på_to_tre, 1)
-
-        bak_foran = regn_negativ_positiv(forskjell_på_en_tre)
-        forskjell_på_en_tre = abs(forskjell_på_en_tre)
-
-        løper_tre_navninput, "er", forskjell_på_en_tre, "sekunder", bak_foran, løper_en_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_to_tre)
-        forskjell_på_to_tre = abs(forskjell_på_to_tre)
-
-        løper_tre_navninput, "er", forskjell_på_to_tre, "sekunder", bak_foran, løper_to_navninput
-        if 'løper_tre_passeringer' not in st.session_state:
-          st.session_state["løper_tre_passeringer"] = 0
-
-        st.session_state["løper_tre_passeringer"] = st.session_state["løper_tre_passeringer"] + 1
-
-        a = st.session_state.løper_tre_passeringer + 1000
-        st.session_state[a] = løper_tre_navninput, "er", forskjell_på_en_tre, "sekunder", bak_foran, løper_en_navninput
-        a += 1
-        st.session_state["løper_tre_passeringer"] = st.session_state["løper_tre_passeringer"] + 1
-        st.session_state[a] = løper_tre_navninput, "er", forskjell_på_to_tre, "sekunder", bak_foran, løper_to_navninput
-
-  
-    if antall_løpere >= 4:
-      st.write('')
-      løper_fire_knapp = st.button(løper_fire_navninput)
-  
-      if løper_fire_knapp:
-        løper_fire_start = st.session_state["løper_fire_start"]
-        passering_løper_en = st.session_state["passering_løper_en"]
-        passering_løper_to = st.session_state["passering_løper_to"]
-        passering_løper_tre = st.session_state["passering_løper_tre"]
-
-        passering_løper_fire = løper_passerer(løper_fire_start)
-        st.session_state["passering_løper_fire"] = passering_løper_fire
-
-        forskjell_på_tre_fire = regn_forskjell(passering_løper_tre, passering_løper_fire)
-        forskjell_på_to_fire = regn_forskjell(passering_løper_to, passering_løper_fire)
-        forskjell_på_en_fire = regn_forskjell(passering_løper_en, passering_løper_fire)
-
-        forskjell_på_tre_fire = round(forskjell_på_tre_fire, 1)
-        forskjell_på_to_fire = round(forskjell_på_to_fire, 1)
-        forskjell_på_en_fire = round(forskjell_på_en_fire, 1)
-
-        bak_foran = regn_negativ_positiv(forskjell_på_en_fire)
-        forskjell_på_en_fire = abs(forskjell_på_en_fire)
-
-        løper_fire_navninput, "er", forskjell_på_en_fire, "sekunder", bak_foran, løper_en_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_to_fire)
-        forskjell_på_to_fire = abs(forskjell_på_to_fire)
-
-        løper_fire_navninput, "er", forskjell_på_to_fire, "sekunder", bak_foran, løper_to_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_tre_fire)
-        forskjell_på_tre_fire = abs(forskjell_på_tre_fire)
-
-        løper_fire_navninput, "er", forskjell_på_tre_fire, "sekunder", bak_foran, løper_tre_navninput
-
-        if 'løper_fire_passeringer' not in st.session_state:
-          st.session_state["løper_fire_passeringer"] = 0
-
-        st.session_state["løper_fire_passeringer"] = st.session_state["løper_fire_passeringer"] + 1
-        
-        a = st.session_state.løper_fire_passeringer + 2000
-        st.session_state[a] = løper_fire_navninput, "er", forskjell_på_en_fire, "sekunder", bak_foran, løper_en_navninput
-        st.session_state["løper_fire_passeringer"] = st.session_state["løper_fire_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_fire_navninput, "er", forskjell_på_to_fire, "sekunder", bak_foran, løper_to_navninput
-        st.session_state["løper_fire_passeringer"] = st.session_state["løper_fire_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_fire_navninput, "er", forskjell_på_tre_fire, "sekunder", bak_foran, løper_tre_navninput
-        
-    if antall_løpere >= 5:
-      st.write('')
-      løper_fem_knapp = st.button(løper_fem_navninput)
-
-      if løper_fem_knapp:
-        løper_fem_start = st.session_state["løper_fem_start"]
-        passering_løper_en = st.session_state["passering_løper_en"]
-        passering_løper_to = st.session_state["passering_løper_to"]
-        passering_løper_tre = st.session_state["passering_løper_tre"]
-        passering_løper_fire = st.session_state["passering_løper_fire"]
-
-        passering_løper_fem = løper_passerer(løper_fem_start)
-        st.session_state["passering_løper_fem"] = passering_løper_fem
-
-        forskjell_på_fire_fem = regn_forskjell(passering_løper_fire, passering_løper_fem)
-        forskjell_på_tre_fem = regn_forskjell(passering_løper_tre, passering_løper_fem)
-        forskjell_på_to_fem = regn_forskjell(passering_løper_to, passering_løper_fem)
-        forskjell_på_en_fem = regn_forskjell(passering_løper_en, passering_løper_fem)
-
-        forskjell_på_en_fem = round(forskjell_på_en_fem, 1)
-        forskjell_på_to_fem = round(forskjell_på_to_fem, 1)
-        forskjell_på_tre_fem = round(forskjell_på_tre_fem, 1)
-        forskjell_på_fire_fem = round(forskjell_på_fire_fem, 1)
-
-        bak_foran = regn_negativ_positiv(forskjell_på_en_fem)
-        forskjell_på_en_fem = abs(forskjell_på_en_fem)
-
-        løper_fem_navninput, "er", forskjell_på_en_fem, "sekunder", bak_foran, løper_en_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_to_fem)
-        forskjell_på_to_fem = abs(forskjell_på_to_fem)
-
-        løper_fem_navninput, "er", forskjell_på_to_fem, "sekunder", bak_foran, løper_to_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_tre_fem)
-        forskjell_på_tre_fem = abs(forskjell_på_tre_fem)
-
-        løper_fem_navninput, "er", forskjell_på_tre_fem, "sekunder", bak_foran, løper_tre_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_fire_fem)
-        forskjell_på_fire_fem = abs(forskjell_på_fire_fem)
-
-        løper_fem_navninput, "er", forskjell_på_fire_fem, "sekunder", bak_foran, løper_fire_navninput
-
-        if 'løper_fem_passeringer' not in st.session_state:
-          st.session_state["løper_fem_passeringer"] = 0
-
-        st.session_state["løper_fem_passeringer"] = st.session_state["løper_fem_passeringer"] + 1
-
-        a = st.session_state.løper_fem_passeringer + 3000
-        st.session_state[a] = løper_fem_navninput, "er", forskjell_på_en_fem, "sekunder", bak_foran, løper_en_navninput
-        st.session_state["løper_fem_passeringer"] = st.session_state["løper_fem_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_fem_navninput, "er", forskjell_på_to_fem, "sekunder", bak_foran, løper_to_navninput
-        st.session_state["løper_fem_passeringer"] = st.session_state["løper_fem_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_fem_navninput, "er", forskjell_på_tre_fem, "sekunder", bak_foran, løper_tre_navninput
-        st.session_state["løper_fem_passeringer"] = st.session_state["løper_fem_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_fem_navninput, "er", forskjell_på_fire_fem, "sekunder", bak_foran, løper_fire_navninput
-  
-    if antall_løpere >= 6:
-      st.write('')
-      løper_seks_knapp = st.button(løper_seks_navninput)
-
-      if løper_seks_knapp:
-        løper_seks_start = st.session_state["løper_seks_start"]
-        passering_løper_en = st.session_state["passering_løper_en"]
-        passering_løper_to = st.session_state["passering_løper_to"]
-        passering_løper_tre = st.session_state["passering_løper_tre"]
-        passering_løper_fire = st.session_state["passering_løper_fire"]
-        passering_løper_fem = st.session_state["passering_løper_fem"]
-
-        passering_løper_seks = løper_passerer(løper_seks_start)
-        st.session_state["passering_løper_seks"] = passering_løper_seks
-
-        forskjell_på_fem_seks = regn_forskjell(passering_løper_fem, passering_løper_seks)
-        forskjell_på_fire_seks = regn_forskjell(passering_løper_fire, passering_løper_seks)
-        forskjell_på_tre_seks = regn_forskjell(passering_løper_tre, passering_løper_seks)
-        forskjell_på_to_seks = regn_forskjell(passering_løper_to, passering_løper_seks)
-        forskjell_på_en_seks = regn_forskjell(passering_løper_en, passering_løper_seks)
-
-        forskjell_på_en_seks = round(forskjell_på_en_seks, 1)
-        forskjell_på_to_seks = round(forskjell_på_to_seks, 1)
-        forskjell_på_tre_seks = round(forskjell_på_tre_seks, 1)
-        forskjell_på_fire_seks = round(forskjell_på_fire_seks, 1)
-        forskjell_på_fem_seks = round(forskjell_på_fem_seks, 1)
-
-        bak_foran = regn_negativ_positiv(forskjell_på_en_seks)
-        forskjell_på_en_seks = abs(forskjell_på_en_seks)
-
-        løper_seks_navninput, "er", forskjell_på_en_seks, "sekunder", bak_foran, løper_en_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_to_seks)
-        forskjell_på_to_seks = abs(forskjell_på_to_seks)
-
-        løper_seks_navninput, "er", forskjell_på_to_seks, "sekunder", bak_foran, løper_to_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_tre_seks)
-        forskjell_på_tre_seks = abs(forskjell_på_tre_seks)
-
-        løper_seks_navninput, "er", forskjell_på_tre_seks, "sekunder", bak_foran, løper_tre_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_fire_seks)
-        forskjell_på_fire_seks = abs(forskjell_på_fire_seks)
-
-        løper_seks_navninput, "er", forskjell_på_fire_seks, "sekunder", bak_foran, løper_fire_navninput
-
-        bak_foran = regn_negativ_positiv(forskjell_på_fem_seks)
-        forskjell_på_fem_seks = abs(forskjell_på_fem_seks)
-
-        løper_seks_navninput, "er", forskjell_på_fem_seks, "sekunder", bak_foran, løper_fem_navninput
-
-        if 'løper_seks_passeringer' not in st.session_state:
-          st.session_state["løper_seks_passeringer"] = 0
-
-        st.session_state["løper_seks_passeringer"] = st.session_state["løper_seks_passeringer"] + 1
-
-        a = st.session_state.løper_seks_passeringer + 4000
-        st.session_state[a] = løper_seks_navninput, "er", forskjell_på_en_seks, "sekunder", bak_foran, løper_en_navninput
-        st.session_state["løper_seks_passeringer"] = st.session_state["løper_seks_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_seks_navninput, "er", forskjell_på_to_seks, "sekunder", bak_foran, løper_to_navninput
-        st.session_state["løper_seks_passeringer"] = st.session_state["løper_seks_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_seks_navninput, "er", forskjell_på_tre_seks, "sekunder", bak_foran, løper_tre_navninput
-        st.session_state["løper_seks_passeringer"] = st.session_state["løper_seks_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_seks_navninput, "er", forskjell_på_fire_seks, "sekunder", bak_foran, løper_fire_navninput
-        st.session_state["løper_seks_passeringer"] = st.session_state["løper_seks_passeringer"] + 1
-        a += 1
-        st.session_state[a] = løper_seks_navninput, "er", forskjell_på_fem_seks, "sekunder", bak_foran, løper_fem_navninput
-
-
-  with tab2:
-    st.header("Logg")
-    logg = st.container()
-
-    st.subheader('Starttider:')
-    løper_en_navninput, 'startet:' , løper_en_startinput
-    
-    løper_to_navninput, 'startet:', løper_to_startinput
-    
-    if antall_løpere >= 3:
-      løper_tre_navninput, 'startet:' , løper_tre_startinput
-
-    if antall_løpere >= 4:
-      løper_fire_navninput, 'startet:' , løper_fire_startinput
-
-    if antall_løpere >= 5:
-      løper_fem_navninput, 'startet:' , løper_fem_startinput
-
-    if antall_løpere >= 6:
-      løper_seks_navninput, 'startet:' , løper_seks_startinput
-
-
-  if 'løper_to_passeringer' not in st.session_state:
-    st.session_state.løper_to_passeringer = 0
-  
-  if 'løper_tre_passeringer' not in st.session_state:
-    st.session_state.løper_tre_passeringer = 0
-  
-  if 'løper_fire_passeringer' not in st.session_state:
-    st.session_state.løper_fire_passeringer = 0
-  
-  if 'løper_fem_passeringer' not in st.session_state:
-    st.session_state.løper_fem_passeringer = 0
-  
-  if 'løper_seks_passeringer' not in st.session_state:
-    st.session_state.løper_seks_passeringer = 0
-  
-  antall_løpere = st.session_state.key
-
-  
-
-  with tab2:
-    st.subheader('Sekunderingstider:')
-    passering = 1
-    a = 1
-    for i in range(st.session_state.løper_to_passeringer):
-      'passering', passering, 'for', løper_to_navninput, ':'
-      st.markdown(st.session_state[a])
-      a += 1
-      passering += 1
-
-    if antall_løpere >= 3:
-        b = 1001
-        passering = 2
-        passering_ = 1
-        for i in range(st.session_state.løper_tre_passeringer):
-          if passering%2 == 0:
-            'passering', passering_, 'for', løper_tre_navninput, ':'
-            passering_ += 1
-          st.markdown(st.session_state[b])
-          b += 1
-          passering += 1
-
-    if antall_løpere >= 4:
-        passering = 3
-        passering_ = 1
-        b = 2001
-        for i in range(st.session_state.løper_fire_passeringer):
-          if passering%3 == 0:
-            'passering', passering_, 'for', løper_fire_navninput, ':'
-            passering_ += 1 
-          st.markdown(st.session_state[b])
-          b += 1
-          passering += 1
-    
-    if antall_løpere >= 5:
-        passering = 4
-        passering_ = 1
-        b = 3001
-        for i in range(st.session_state.løper_fem_passeringer):
-          if passering%4 == 0:
-            'passering', passering_, 'for', løper_fem_navninput, ':'
-            passering_ += 1
-          st.markdown(st.session_state[b])
-          b += 1
-          passering += 1
-
-    if antall_løpere == 6:
-        passering = 5
-        passering_ = 1
-        b = 4001
-        for i in range(st.session_state.løper_seks_passeringer):
-          if passering%5 == 0:
-            'passering', passering_, 'for', løper_seks_navninput, ':'
-            passering_ += 1
-          st.markdown(st.session_state[b])
-          b += 1
-          passering += 1
-
-  st.write('')
-  st.write('')
-  st.write("Trykk på knappen under to ganger for å gå tilbake til starttider." )
-  st.write("Advarsel: Du vil miste hele loggen og starttidene du allerede har lagt inn.")
-  tilbake = st.button('Gå tilbake til starttider')
-  if tilbake:
-    for key in st.session_state.keys():
-      st.balloons()
-      del st.session_state[key]
-
-
+def skriv_to_løpere(passering_løper_en, passering_løper_to, løper_en_navn, løper_to_navn):
+	forskjell_på_en_to = regn_forskjell(passering_løper_en, passering_løper_to)
+
+	forskjell_på_en_to = round(forskjell_på_en_to, 1)
+
+	bak_foran = regn_negativ_positiv(forskjell_på_en_to)
+	forskjell_på_en_to = abs(forskjell_på_en_to)
+
+	st.session_state["passering_løper_to"] = passering_løper_to
+
+	skriv = løper_to_navn + " er " + str(forskjell_på_en_to) + " sekunder" + bak_foran + løper_en_navn
+	return skriv
+
+if "hvis_starttider" in st.session_state:
+	løper_en_navninput = st.session_state['løper_en_navninput']
+	løper_to_navninput = st.session_state['løper_to_navninput']
+	løper_en_startinput = st.session_state['løper_en_startinput']
+	løper_to_startinput = st.session_state['løper_to_startinput']
+	løper_en_startnr = st.session_state['løper_en_startnr']
+	løper_to_startnr = st.session_state['løper_to_startnr']
+
+	antall_løpere = st.session_state.antall_løpere
+
+	if st.session_state.antall_løpere >= 3:
+		løper_tre_navninput = st.session_state['løper_tre_navninput']
+		løper_tre_startinput = st.session_state['løper_tre_startinput']
+		løper_tre_startnr = st.session_state['løper_tre_startnr']
+	
+	if st.session_state.antall_løpere >= 4:
+		løper_fire_navninput = st.session_state['løper_fire_navninput']
+		løper_fire_startinput = st.session_state['løper_fire_startinput']
+		løper_fire_startnr = st.session_state['løper_fire_startnr']
+
+	if st.session_state.antall_løpere >= 5:
+		løper_fem_navninput = st.session_state['løper_fem_navninput']
+		løper_fem_startinput = st.session_state['løper_fem_startinput']
+		løper_fem_startnr = st.session_state['løper_fem_startnr']
+	
+	if st.session_state.antall_løpere == 6:
+		løper_seks_navninput = st.session_state['løper_seks_navninput']
+		løper_seks_startinput = st.session_state['løper_seks_startinput']
+		løper_seks_startnr = st.session_state['løper_seks_startnr']
+
+	
+	tab3 = st.empty()
+
+	if st.session_state["antall_løpere"] >= 3:
+		løper_tre_navninput = st.session_state['løper_tre_navninput']
+	
+	if st.session_state.antall_løpere >= 4:
+		løper_fire_navninput = st.session_state['løper_fire_navninput']
+
+	if st.session_state.antall_løpere >= 5:
+		løper_fem_navninput = st.session_state['løper_fem_navninput']
+	
+	if st.session_state.antall_løpere == 6:
+		løper_seks_navninput = st.session_state['løper_seks_navninput']
+
+	tab1, tab2, tab3, tab4  = st.tabs(["Sekundering", "Logg", "Startliste", "Link resultater"])
+	with tab4:
+		st.write("Her er link til resultatlista:")
+		st.write("https://live.eqtiming.com/" + str(st.session_state["løpe_id"]) + "#result")
+
+	if "antall_passeringer" not in st.session_state:
+		st.session_state["antall_passeringer"] =  0
+		antall_passeringer = 0
+		
+
+	with tab1:
+		data_log = pd.DataFrame(columns=["Passering", "Løper", "Forskjellen(sekunder)", "Hvem er han foran/bak"])
+
+		st.header("Sekundering")
+		st.write('Trykk på navnet til løperen som passerer:')
+
+		antall_løpere = st.session_state.antall_løpere
+		if 'lapping_for_en' not in st.session_state:
+			st.session_state["lapping_for_en"] = 0
+			st.session_state["lapping_for_to"] = 0
+			st.session_state["lapping_for_tre"] = 0
+			st.session_state["lapping_for_fire"] = 0
+			st.session_state["lapping_for_fem"] = 0
+			st.session_state["lapping_for_seks"] = 0
+			st.session_state["data_log"] = []
+			st.session_state["data_log_col"] = data_log
+
+		data_log = pd.DataFrame(columns=["Navn", "Startnummer", "Passeringstid", "Starttid", "Tid brukt", "Tid bak"])
+					
+		if antall_løpere > 1:
+			st.write('')
+			løper_en_knapp = st.button(løper_en_startnr + " " + løper_en_navninput)
+			if løper_en_knapp:
+				st.session_state["lapping_for_en"] += 1
+				st.session_state["siste_passering_løper_en"] = løper_passerer(st.session_state["løper_en_start"])
+				a = 1
+				n = 1
+				for i in range(5):
+					if n == 1:
+						løper = "to"
+					elif n == 2:
+						løper = "tre"
+					elif n == 3:
+						løper = "fire"
+					elif n == 4:
+						løper = "fem"
+					elif n == 5:
+						løper = "seks"
+
+					if st.session_state["lapping_for_" + løper] == st.session_state["lapping_for_en"]:
+						st.write(skriv_to_løpere(st.session_state["siste_passering_løper_" + løper], st.session_state["siste_passering_løper_en"], st.session_state["løper_" + løper + "_navninput"], st.session_state["løper_en_navninput"]))
+						a += 1
+					n += 1
+				if a == 1:
+					st.write(st.session_state["løper_en_navninput"] + " har passert")
+
+
+				passerings_logg = str(st.session_state["lapping_for_en"]) + "logg"
+
+				if passerings_logg not in st.session_state:
+					st.session_state[passerings_logg] = data_log
+				t = time.localtime()
+
+				current_time = time.strftime("%H:%M:%S", t)
+
+				tid_minus_start = time.time() - st.session_state["løper_en_start"] 
+				starttid = st.session_state["løper_en_startinput"]
+				starttid_sekunder = regn_starttid(str(current_time)) - regn_starttid(str(st.session_state["løper_en_startinput"]))
+				starttid_sekunder_formatert = regn_fra_sekk_til_min(starttid_sekunder)
+				df = pd.DataFrame({"Navn": [løper_en_navninput], 
+					"Startnummer": [løper_en_startnr], 
+					"Tid bak": ["ikke regnet ut enda"],
+					"Passeringstid": [current_time],
+					"Starttid": [starttid],
+					"Tid brukt": [starttid_sekunder_formatert],
+					'Tid brukt(sekunder)': [starttid_sekunder]},
+					index= [""])
+
+				df_2 = st.session_state[passerings_logg]
+
+				st.session_state[passerings_logg] = pd.concat([df_2, df])
+
+		if antall_løpere >= 2:
+			st.write('')
+			løper_to_knapp = st.button(løper_to_startnr + " " + løper_to_navninput)
+
+			if løper_to_knapp:
+				st.session_state["lapping_for_to"] += 1
+				st.session_state["siste_passering_løper_to"] = løper_passerer(st.session_state["løper_to_start"])
+				a = 1
+				n = 1
+				for i in range(5):
+					if n == 1:
+						løper = "en"
+					elif n == 2:
+						løper = "tre"
+					elif n == 3:
+						løper = "fire"
+					elif n == 4:
+						løper = "fem"
+					elif n == 5:
+						løper = "seks"
+
+					if st.session_state["lapping_for_" + løper] == st.session_state["lapping_for_to"]:
+						st.write(skriv_to_løpere(st.session_state["siste_passering_løper_" + løper], st.session_state["siste_passering_løper_to"], st.session_state["løper_" + løper + "_navninput"], st.session_state["løper_to_navninput"]))
+						a += 1
+					n += 1
+				if a == 1:
+					st.write(st.session_state["løper_to_navninput"] + " har passert")
+
+				passerings_logg = str(st.session_state["lapping_for_to"]) + "logg"
+
+				if passerings_logg not in st.session_state:
+					st.session_state[passerings_logg] = data_log
+				t = time.localtime()
+
+				current_time = time.strftime("%H:%M:%S", t)
+
+				tid_minus_start = time.time() - st.session_state["løper_to_start"] 
+				starttid = st.session_state["løper_to_startinput"]
+				starttid_sekunder = regn_starttid(str(current_time)) - regn_starttid(str(st.session_state["løper_to_startinput"]))
+
+				df = pd.DataFrame({"Navn": [løper_to_navninput], 
+					"Startnummer": [løper_to_startnr], 
+					"Tid bak": ["ikke regnet ut enda"],
+					"Passeringstid": [current_time],
+					"Starttid": [starttid],
+					"Tid brukt": [regn_fra_sekk_til_min(starttid_sekunder)],
+					'Tid brukt(sekunder)': [starttid_sekunder]},
+					index= [" "])
+
+				df_2 = st.session_state[passerings_logg]
+
+				st.session_state[passerings_logg] = pd.concat([df_2, df])
+		if antall_løpere >= 3:
+			
+			st.write('')
+			løper_tre_knapp = st.button(løper_tre_startnr + " " + løper_tre_navninput)
+
+			if løper_tre_knapp:
+				st.session_state["lapping_for_tre"] += 1
+				st.session_state["siste_passering_løper_tre"] = løper_passerer(st.session_state["løper_tre_start"])
+				a = 1
+				n = 1
+				for i in range(5):
+					if n == 1:
+						løper = "en"
+					elif n == 2:
+						løper = "to"
+					elif n == 3:
+						løper = "fire"
+					elif n == 4:
+						løper = "fem"
+					elif n == 5:
+						løper = "seks"
+
+					if st.session_state["lapping_for_" + løper] == st.session_state["lapping_for_tre"]:
+						st.write(skriv_to_løpere(st.session_state["siste_passering_løper_" + løper], st.session_state["siste_passering_løper_tre"], st.session_state["løper_" + løper + "_navninput"], st.session_state["løper_tre_navninput"]))
+						a += 1
+					n += 1
+				if a == 1:
+					st.write(st.session_state["løper_tre_navninput"] + " har passert")
+
+				passerings_logg = str(st.session_state["lapping_for_tre"]) + "logg"
+
+				if passerings_logg not in st.session_state:
+					st.session_state[passerings_logg] = data_log
+				t = time.localtime()
+
+				current_time = time.strftime("%H:%M:%S", t)
+
+				tid_minus_start = time.time() - st.session_state["løper_tre_start"] 
+				starttid = st.session_state["løper_tre_startinput"]
+				starttid_sekunder = regn_starttid(str(current_time)) - regn_starttid(str(st.session_state["løper_tre_startinput"]))
+
+				df = pd.DataFrame({"Navn": [løper_tre_navninput], 
+					"Startnummer": [løper_tre_startnr], 
+					"Tid bak": ["ikke regnet ut enda"],
+					"Passeringstid": [current_time],
+					"Starttid": [starttid],
+					"Tid brukt": [regn_fra_sekk_til_min(starttid_sekunder)],
+					'Tid brukt(sekunder)': [starttid_sekunder]},
+					index= [" "])
+
+				df_2 = st.session_state[passerings_logg]
+
+				st.session_state[passerings_logg] = pd.concat([df_2, df])
+
+
+		if antall_løpere >= 4:
+			st.write('')
+			løper_fire_knapp = st.button(løper_fire_startnr + " " + løper_fire_navninput)
+
+			if løper_fire_knapp:
+				st.session_state["lapping_for_fire"] += 1
+
+				st.session_state["siste_passering_løper_fire"] = løper_passerer(st.session_state["løper_fire_start"])
+				a = 1
+				n = 1
+				for i in range(5):
+					if n == 1:
+						løper = "en"
+					elif n == 2:
+						løper = "to"
+					elif n == 3:
+						løper = "tre"
+					elif n == 4:
+						løper = "fem"
+					elif n == 5:
+						løper = "seks"
+
+					if st.session_state["lapping_for_" + løper] == st.session_state["lapping_for_fire"]:
+						st.write(skriv_to_løpere(st.session_state["siste_passering_løper_" + løper], st.session_state["siste_passering_løper_fire"], st.session_state["løper_" + løper + "_navninput"], st.session_state["løper_fire_navninput"]))
+						a += 1
+					n += 1
+				if a == 1:
+					st.write(st.session_state["løper_fire_navninput"] + " har passert")
+
+
+				passerings_logg = str(st.session_state["lapping_for_fire"]) + "logg"
+
+				if passerings_logg not in st.session_state:
+					st.session_state[passerings_logg] = data_log
+				t = time.localtime()
+
+				current_time = time.strftime("%H:%M:%S", t)
+
+				tid_minus_start = time.time() - st.session_state["løper_fire_start"] 
+				starttid = st.session_state["løper_fire_startinput"]
+				starttid_sekunder = regn_starttid(str(current_time)) - regn_starttid(str(st.session_state["løper_fire_startinput"]))
+
+				df = pd.DataFrame({"Navn": [løper_fire_navninput], 
+					"Startnummer": [løper_fire_startnr], 
+					"Tid bak": ["ikke regnet ut enda"],
+					"Passeringstid": [current_time],
+					"Starttid": [starttid],
+					"Tid brukt": [regn_fra_sekk_til_min(starttid_sekunder)],
+					'Tid brukt(sekunder)': [starttid_sekunder]},
+					index= [" "])
+
+				df_2 = st.session_state[passerings_logg]
+
+				st.session_state[passerings_logg] = pd.concat([df_2, df])
+
+		if antall_løpere >= 5:
+			st.write('')
+			løper_fem_knapp = st.button(løper_fem_startnr + " " + løper_fem_navninput)
+
+			if løper_fem_knapp:
+				st.session_state["lapping_for_fem"] += 1
+				st.session_state["siste_passering_løper_fem"] = løper_passerer(st.session_state["løper_fem_start"])
+				
+				a = 1
+				n = 1
+				for i in range(5):
+					if n == 1:
+						løper = "en"
+					elif n == 2:
+						løper = "to"
+					elif n == 3:
+						løper = "tre"
+					elif n == 4:
+						løper = "fire"
+					elif n == 5:
+						løper = "seks"
+
+					if st.session_state["lapping_for_" + løper] == st.session_state["lapping_for_fem"]:
+						st.write(skriv_to_løpere(st.session_state["siste_passering_løper_" + løper], st.session_state["siste_passering_løper_fem"], st.session_state["løper_" + løper + "_navninput"], st.session_state["løper_fem_navninput"]))
+						a += 1
+
+					n += 1
+				if a == 1:
+					st.write(st.session_state["løper_fem_navninput"] + " har passert")
+
+				passerings_logg = str(st.session_state["lapping_for_fem"]) + "logg"
+
+				if passerings_logg not in st.session_state:
+					st.session_state[passerings_logg] = data_log
+				t = time.localtime()
+
+				current_time = time.strftime("%H:%M:%S", t)
+
+				tid_minus_start = time.time() - st.session_state["løper_fem_start"] 
+				starttid = st.session_state["løper_fem_startinput"]
+				starttid_sekunder = regn_starttid(str(current_time)) - regn_starttid(str(st.session_state["løper_fem_startinput"]))
+
+				df = pd.DataFrame({"Navn": [løper_fem_navninput], 
+					"Startnummer": [løper_fem_startnr], 
+					"Tid bak": ["ikke regnet ut enda"],
+					"Passeringstid": [current_time],
+					"Starttid": [starttid],
+					"Tid brukt": [regn_fra_sekk_til_min(starttid_sekunder)],
+					'Tid brukt(sekunder)': [starttid_sekunder]},
+					index= [" "])
+
+				df_2 = st.session_state[passerings_logg]
+
+				st.session_state[passerings_logg] = pd.concat([df_2, df])
+
+		if antall_løpere >= 6:
+			st.write('')
+			løper_seks_knapp = st.button(løper_seks_startnr + " " + løper_seks_navninput)
+
+			if løper_seks_knapp:
+				st.session_state["lapping_for_seks"] += 1
+				st.session_state["siste_passering_løper_seks"] = løper_passerer(st.session_state["løper_seks_start"])
+				
+				n = 1
+				a = 1
+				for i in range(5):
+					if n == 1:
+						løper = "en"
+					elif n == 2:
+						løper = "to"
+					elif n == 3:
+						løper = "tre"
+					elif n == 4:
+						løper = "fire"
+					elif n == 5:
+						løper = "fem"
+
+					if st.session_state["lapping_for_" + løper] == st.session_state["lapping_for_seks"]:
+						st.write(skriv_to_løpere(st.session_state["siste_passering_løper_" + løper], st.session_state["siste_passering_løper_seks"], st.session_state["løper_" + løper + "_navninput"], st.session_state["løper_seks_navninput"]))
+						a += 1
+					n += 1
+				if a == 1:
+					st.write(st.session_state["løper_seks_navninput"] + " har passert")
+
+				passerings_logg = str(st.session_state["lapping_for_seks"]) + "logg"
+
+				if passerings_logg not in st.session_state:
+					st.session_state[passerings_logg] = data_log
+				t = time.localtime()
+
+				current_time = time.strftime("%H:%M:%S", t)
+
+				tid_minus_start = time.time() - st.session_state["løper_seks_start"] 
+				starttid = st.session_state["løper_seks_startinput"]
+				starttid_sekunder = regn_starttid(str(current_time)) - regn_starttid(str(st.session_state["løper_seks_startinput"]))
+
+				df = pd.DataFrame({"Navn": [løper_seks_navninput], 
+					"Startnummer": [løper_seks_startnr], 
+					"Tid bak": ["ikke regnet ut enda"],
+					"Passeringstid": [current_time],
+					"Starttid": [starttid],
+					"Tid brukt": [regn_fra_sekk_til_min(starttid_sekunder)],
+					'Tid brukt(sekunder)': [starttid_sekunder]},
+					index= [" "])
+
+				df_2 = st.session_state[passerings_logg]
+
+				st.session_state[passerings_logg] = pd.concat([df_2, df])
+
+	with tab2:
+		løper_en_navninput = st.session_state['løper_en_navninput']
+		løper_to_navninput = st.session_state['løper_to_navninput']
+		løper_en_startinput = st.session_state['løper_en_startinput']
+		løper_to_startinput = st.session_state['løper_to_startinput']
+		antall_løpere = st.session_state.antall_løpere
+
+		if st.session_state.antall_løpere >= 3:
+			løper_tre_navninput = st.session_state['løper_tre_navninput']
+			løper_tre_startinput = st.session_state['løper_tre_startinput']
+		
+		if st.session_state.antall_løpere >= 4:
+			løper_fire_navninput = st.session_state['løper_fire_navninput']
+			løper_fire_startinput = st.session_state['løper_fire_startinput']
+
+		if st.session_state.antall_løpere >= 5:
+			løper_fem_navninput = st.session_state['løper_fem_navninput']
+			løper_fem_startinput = st.session_state['løper_fem_startinput']
+		
+		if st.session_state.antall_løpere == 6:
+			løper_seks_navninput = st.session_state['løper_seks_navninput']
+			løper_seks_startinput = st.session_state['løper_seks_startinput']
+
+
+	if 'løper_to_passeringer' not in st.session_state:
+		st.session_state.løper_to_passeringer = 0
+
+	if 'løper_tre_passeringer' not in st.session_state:
+		st.session_state.løper_tre_passeringer = 0
+
+	if 'løper_fire_passeringer' not in st.session_state:
+		st.session_state.løper_fire_passeringer = 0
+
+	if 'løper_fem_passeringer' not in st.session_state:
+		st.session_state.løper_fem_passeringer = 0
+
+	if 'løper_seks_passeringer' not in st.session_state:
+		st.session_state.løper_seks_passeringer = 0
+
+	with tab3:
+		klasser_dict_to = st.session_state["klasser_dict_to"]
+		klasse_som_sekunderes = st.selectbox('Velg hvilken klasse du vil se', klasser_dict_to)
+
+		if klasse_som_sekunderes != 'Velg klasse her':
+			df = st.session_state[klasse_som_sekunderes + '.csv']
+			st.dataframe(df)
+	
+	with tab2:
+		st.header("Logg")
+		st.subheader('Sekunderingstider:')
+		st.write("Starttid, passeringstid og tid brukt er i timer minutter sekunder.")
+		n = 1
+
+		for i in range(50):
+			logg = str(n) + "logg"
+			if logg in st.session_state:
+				st.write(("Passering " + str(n)  + ":"))
+				df = st.session_state[logg]
+				df.sort_values(by='Tid brukt(sekunder)', ascending=True, inplace=True)
+				
+				if st.session_state["lapping_for_to"] >= n:
+					try:
+						value_0 = df.iloc[0, 6]
+						df.iloc[0, 5] = "0"
+						value_1 = df.iloc[1, 6]
+						value_1 = value_1 - value_0
+						df.iloc[1, 5] = value_1
+						index_liste = [1, 2]
+					except:
+						mongo = "mongo"
+
+				if antall_løpere > 2:
+					if st.session_state["lapping_for_tre"] >= n:
+						try:
+							value_2 = df.iloc[2, 6]
+							value_2 = value_2 - value_0
+							df.iloc[2, 5] = value_2
+							index_liste = [1, 2, 3]
+						except:
+							mongo = "mongo"
+
+				if antall_løpere > 3:
+					if st.session_state["lapping_for_fire"] >= n:
+						try:
+							value_3 = df.iloc[3, 6]
+							value_3 = value_3 - value_0
+							df.iloc[3, 5] = value_3
+							index_liste = [1, 2, 3, 4]
+						except:
+							mongo = "mongo"
+
+				if antall_løpere > 4:
+					if st.session_state["lapping_for_fem"] >= n:
+						try:
+							value_4 = df.iloc[4, 6]
+							value_4 = value_4 - value_0
+							df.iloc[4, 5] = value_4
+							index_liste = [1, 2, 3, 4, 5]
+						except:
+							mongo = "mongo"
+
+				if antall_løpere > 5:
+					if st.session_state["lapping_for_seks"] >= n:
+						try:
+							value_5 = df.iloc[5, 6]
+							value_5 = value_5 - value_0
+							df.iloc[5, 5] = value_5
+							index_liste = [1, 2, 3, 4, 5, 6]
+						except:
+							mongo = "mongo"
+				if st.session_state["lapping_for_to"] >= n:
+					try:
+						df.index = index_liste
+					except:
+						mongo = "mongo"
+					st.dataframe(df)
+
+			else:
+				break
+			n += 1
+		
+
+	st.write('')
+	st.write('')
+	st.write("Trykk på knappen under to ganger for å tilbakestille løperne." )
+	st.write("Advarsel: Du vil bli nødt til å legge inn alle løperne på nytt. Du må ikke legge inn link til rennet på nytt.")
+	tilbake = st.button('Reset løpere')
+	if tilbake:
+		st.session_state["resatt"] = 1
+		a = st.session_state["antall_løpere"]
+		n = 1
+		del st.session_state["hvis_starttider"]
+
+		for i in range(a):
+			
+			if antall_løpere + 1 < n:
+				break
+			if n == 1:
+				løper = "en"
+				knapper = st.session_state["knapp_for_reseten"]
+				del st.session_state[knapper]
+			elif n == 2:
+				løper = "to"
+				knapper = st.session_state["knapp_for_resetto"]
+				del st.session_state[knapper]
+			elif n == 3:
+				løper = "tre"
+				knapper = st.session_state["knapp_for_resettre"]
+				del st.session_state[knapper]
+			elif n == 4:
+				løper = "fire"
+				knapper = st.session_state["knapp_for_resetfire"]
+				del st.session_state[knapper]
+			elif n == 5:
+				løper = "fem"
+				knapper = st.session_state["knapp_for_resetfem"]
+				del st.session_state[knapper]
+			elif n == 6:
+				løper == "seks"
+				knapper = st.session_state["knapp_for_resetseks"]
+				del st.session_state[knapper]
+
+			try:
+				del st.session_state["siste_passering_løper_" + løper]
+			except:
+				mongo = "mongo"
+			try:
+				del st.session_state["løper_" + løper + "_navninput"]
+			except:
+				mongo = "mongo"
+			try:
+				del st.session_state["løper_" + løper + "_startinput"]
+			except:
+				mongo = "mongo"
+			try:
+				del st.session_state["løper_" + løper + "_start"]
+			except:
+				mongo = "mongo"
+			try:
+				del st.session_state["løper_" + løper + "_startnr"]
+			except:
+				mongo = "mongo"
+
+			n += 1
+			
+		
+		try:
+			del st.session_state["maks_valgt"]
+		except:
+			mongo = "mongo"
+
+		try:
+			del st.session_state["stop"]
+		except:
+			mongo = "mongo"
+
+		del st.session_state["rerun"]
+		del st.session_state["løper_nummer"]
+
+		antall_løpere = st.session_state["antall_løpere"]
+		if antall_løpere == 2:
+			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"])
+		elif antall_løpere == 3:
+			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"], st.session_state["lapping_for_tre"])
+		elif antall_løpere == 4:
+			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"], st.session_state["lapping_for_tre"], st.session_state["lapping_for_fire"])
+		elif antall_løpere == 5:
+			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"], st.session_state["lapping_for_tre"], st.session_state["lapping_for_fire"], st.session_state["lapping_for_fem"])
+		elif antall_løpere == 6:
+			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"], st.session_state["lapping_for_tre"], st.session_state["lapping_for_fire"], st.session_state["lapping_for_fem"], st.session_state["lapping_for_seks"])
+		try:
+			st.session_state["lapping_for_en"] = st.session_state["lapping_for_to"] = st.session_state["lapping_for_tre"] = st.session_state["lapping_for_fire"] = st.session_state["lapping_for_fem"] = st.session_state["lapping_for_seks"] = highest_number
+		except:
+			mongo = "mongo"
+		del st.session_state["antall_løpere"]
