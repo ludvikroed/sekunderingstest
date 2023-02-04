@@ -4,28 +4,32 @@ import pandas as pd
 import time
 import requests
 
-def løpe_i_dag():
-    x = st.session_state["løper_x"]
-    playerdata[x]['Id']
-    st.session_state["løpe_id"] = playerdata[x]['Id']
-    url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(playerdata[x]['Id'])
+if "tider_er_lastet_ned" not in st.session_state:
+    st.session_state["tider_er_lastet_ned"] = False
+
+def last_ned_fil_fra_nett(id):
+    url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(id)
     st.session_state["url"] = url
     response = requests.get(st.session_state["url"])
     xml_content = response.content
     data_dict = xmltodict.parse(xml_content)
 
     st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
-    st.session_state["uploaded_file"] = 1
-    st.session_state["slutt_å_hvise_valg"] = True
+    st.session_state["link_til_fil"] = url
+    st.session_state["tider_er_lastet_ned"] = True
+
+def løp_i_dag_er_valgt():
+    x = st.session_state["løper_x"]
+    last_ned_fil_fra_nett(playerdata[x]['Id'])
+
+def send_link():
+    url_input = st.session_state["url_input"]
+    numbers = url_input.split("/")[-1].split("#")[0]
+    print(numbers)
+    last_ned_fil_fra_nett(numbers)
 
 
 send_starttider = 0
-
-try:
-	if send:
-		st.session_state["uploaded_file"] = 1
-except:
-	mongo = "monog"
 
 if "uploaded_file" not in st.session_state:
 	st.session_state["uploaded_file"] = 0
@@ -43,10 +47,10 @@ startliste_row = []
 hvis_løpere = 1
 
 if "hvis_starttider" not in st.session_state:
-    if st.session_state["uploaded_file"] == 0:
-        valg_allterntiver = ["Bruk knapper(annbelfalt)", "Link", "Fil", "Manuell innfylling"]
+    if st.session_state["tider_er_lastet_ned"]  == False:
+        valg_allterntiver = ["Velg renn(annbelfalt)", "Link", "Fil", "Manuell innfylling"]
         valgmåte = st.radio("Velg hvordan du vil velge løpere:", options=valg_allterntiver)
-        if valgmåte == "Bruk knapper(annbelfalt)":
+        if valgmåte == "Velg renn(annbelfalt)":
             url_api = "https://events.eqtiming.com/api/Events?query=&dateFrom=2023-01-01+00%3A00&dateTo=2023-03-31+23%3A59&organizationId=0&regionIds=&levelIds=&sportIds=&take=1500&dateSort=true&desc=false&onlyValidated=false&onlyshowfororganizer=false&organizerIds="
             payload={}
             headers = {
@@ -72,16 +76,25 @@ if "hvis_starttider" not in st.session_state:
 
             current_date = time.strftime("%Y-%m-%d")
             x = 0
-            current_date = "2023-02-04"
             st.write("Renn i dag:")
             for id in playerdata:
                 start_time = playerdata[x]['Starttime']
                 start_time = start_time.split("T")
                 if start_time[0] == current_date:
                     st.session_state["løper_x"] = x
-                    st.button(playerdata[x]['Name'], on_click=løpe_i_dag)            
+                    st.button(playerdata[x]['Name'], on_click=løp_i_dag_er_valgt)            
                 x += 1
-
+        if valgmåte == "Link":
+            st.write("Kopier linken fra ditt renn på eqtiming")
+            st.write("Gå inn på rennet ditt å trykk på deltakere. Derretter kopierer du linken og limer den inn her:")
+            st.session_state["url_input"] = st.text_input("Lim inn linken fra EQtiming rennet du skal sekundere løpere fra her:")
+            send = st.button("Send", on_click=send_link)
+            '''
+            if send:
+                numbers = url_input.split("/")[-1].split("#")[0]
+                test = url_input.split("/")
+                test_to = url_input.split(".")
+'''
         if valgmåte == "Fil":
             st.write("Trykk på pilen øverst i venste hjørnet å velg Sekundering-med-fil")
         if valgmåte == "Manuell innfylling":
@@ -89,51 +102,12 @@ if "hvis_starttider" not in st.session_state:
 
     hvis_løpere = 0
 
-    if "resatt" not in st.session_state:
-        if st.session_state["uploaded_file"] == 0:
-            if valgmåte == "Link":
-                if st.session_state["uploaded_file"] == 0:
-                    st.write("Kopier linken fra ditt renn på eqtiming")
-                    st.write("Gå inn på rennet ditt å trykk på deltakere. Derretter kopierer du linken og limer den inn her:")
-                    url_input = st.text_input("Lim inn linken fra EQtiming rennet du skal sekundere løpere fra her:")
-                    send = st.button("Send")
-                    if send:
-                        numbers = url_input.split("/")[-1].split("#")[0]
-                        test = url_input.split("/")
-                        test_to = url_input.split(".")
-                        if send:
-                            if url_input == "https://www.eqtiming.com/no/":
-                                st.write("Det ser ut som at du bare har lakt inn linken til EQtiming sin forside. Du må legge inn linken til rennet du skal være med på.")
-                            elif url_input == "":
-                                st.write("Du må legge inn en link")
-                            elif test[1] == "live.eqtiming.com" or test[2] == "live.eqtiming.com" or test[3] == "live.eqtiming.com":
-                                if int(numbers):
-                                    try:
-                                        st.session_state["løpe_id"] = numbers
-                                        url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(numbers)
-                                        st.session_state["url"] = url
-                                        response = requests.get(st.session_state["url"])
-                                        xml_content = response.content
-                                        data_dict = xmltodict.parse(xml_content)
-
-                                        st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
-                                        st.session_state["uploaded_file"] = 1
-                                        
-                                    except:
-                                        st.write("det var noe som gikk feil med nedlastning av startliste")
-                                    st.experimental_rerun()
-                                else:
-                                    "Programmet greier ikke å lese deltakerene fra linken du har lagt til. Det kan være at EQtiming har endre oppsettet sitt med hvoran man laster ned startlister."
-                            else:
-                                "Det ser ikke ut som at linken du har lagdt ikke er fra inn er fra EQtiming. Hvis dette ikke er riktig kan du sende en meldig til Ludvik Blichfeldt Roed på messenger. "
-
-
-    if st.session_state["uploaded_file"] == 1:
+    if st.session_state["tider_er_lastet_ned"]:
         if "hvis_starttider" not in st.session_state:
             tab2, tab3 = st.tabs(["Velg løpere", "Startlister"])
 		
 
-    if st.session_state["uploaded_file"] == 1:
+    if st.session_state["tider_er_lastet_ned"]:
         if "resatt" not in st.session_state:
             if "Lister_er_lagd" not in st.session_state:
                 x = 0
@@ -305,6 +279,7 @@ if "hvis_starttider" not in st.session_state:
                             st.session_state["rerun"] = 1
                             st.experimental_rerun()
                     
+                    
 
                     if "stop" not in st.session_state:
                         st.session_state["knapp_for_reset" + løper] = knapp_id
@@ -332,6 +307,7 @@ if "hvis_starttider" not in st.session_state:
                             st.session_state["maks_valgt"] = 1
 
                         st.session_state["løper_nummer"] = st.session_state["løper_nummer"] + 1
+                        st.experimental_rerun()
                 teller += 1
                             
 
@@ -511,7 +487,6 @@ if "hvis_starttider" in st.session_state:
 	løper_to_startnr = st.session_state['løper_to_startnr']
 
 	antall_løpere = st.session_state.antall_løpere
-
 	if st.session_state.antall_løpere >= 3:
 		løper_tre_navninput = st.session_state['løper_tre_navninput']
 		løper_tre_startinput = st.session_state['løper_tre_startinput']
