@@ -7,32 +7,50 @@ import requests
 if "tider_er_lastet_ned" not in st.session_state:
     st.session_state["tider_er_lastet_ned"] = False
 
-def last_ned_fil_fra_nett(id):
-    url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(id)
-    st.session_state["url"] = url
-    response = requests.get(st.session_state["url"])
-    xml_content = response.content
-    data_dict = xmltodict.parse(xml_content)
-
-    st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
-    st.session_state["link_til_fil"] = url
-    st.session_state["tider_er_lastet_ned"] = True
-
 def løp_i_dag_er_valgt():
-    x = st.session_state["løper_x"]
-    last_ned_fil_fra_nett(playerdata[x]['Id'])
+    try:
+        x = st.session_state["løper_x"]
+        id = playerdata[x]['Id']
+        url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(id)
+        st.session_state["url"] = url
+        response = requests.get(st.session_state["url"])
+        xml_content = response.content
+        data_dict = xmltodict.parse(xml_content)
+        st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
+        st.session_state["link_til_fil"] = url
+        st.session_state["løpe_id"] = id
+        st.session_state["tider_er_lastet_ned"] = True
+    except:
+        st.session_state["feil_med_valg_av_renn"] = "Programmet greide ikke å lese EQtiming sin nettside. Du kan prøve å lime inn linken til rennet."
 
 def send_link():
     url_input = st.session_state["url_input"]
     numbers = url_input.split("/")[-1].split("#")[0]
-    print(numbers)
-    last_ned_fil_fra_nett(numbers)
+    test = url_input.split("/")
 
+    if url_input == "https://www.eqtiming.com/no/":
+        st.session_state["noe_er_fel_med_link"] = "Det ser ut som at du bare har lakt inn linken til EQtiming sin forside. Du må legge inn linken til rennet du skal være med på."
+    elif test[1] == "live.eqtiming.com" or test[2] == "live.eqtiming.com" or test[3] == "live.eqtiming.com":
+        if int(numbers):
+            try:
+                st.session_state["løpe_id"] = numbers
+                url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(numbers)
+                st.session_state["url"] = url
+                response = requests.get(st.session_state["url"])
+                xml_content = response.content
+                data_dict = xmltodict.parse(xml_content)
+
+                st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
+                st.session_state["tider_er_lastet_ned"] = True
+                
+            except:
+                st.session_state["noe_er_fel_med_link"] = "det var noe som gikk feil med nedlastning av startliste."
+        else:
+            st.session_state["noe_er_fel_med_link"] = "Programmet greier ikke å lese deltakerene fra linken du har lagt til. Det kan være at EQtiming har endre oppsettet sitt med hvoran man laster ned startlister."
+    else:
+        st.session_state["noe_er_fel_med_link"] = "Det ser ikke ut som at linken du har lagdt ikke er fra inn er fra EQtiming. Hvis dette ikke er riktig kan du sende en meldig til Ludvik Blichfeldt Roed på messenger. "
 
 send_starttider = 0
-
-if "uploaded_file" not in st.session_state:
-	st.session_state["uploaded_file"] = 0
 
 if "antall_løpere" not in st.session_state:
 	st.session_state.antall_løpere = 0
@@ -48,6 +66,8 @@ hvis_løpere = 1
 
 if "hvis_starttider" not in st.session_state:
     if st.session_state["tider_er_lastet_ned"]  == False:
+        if "feil_med_valg_av_renn" in st.session_state:
+            st.write(st.session_state["feil_med_valg_av_renn"])
         valg_allterntiver = ["Velg renn(annbelfalt)", "Link", "Fil", "Manuell innfylling"]
         valgmåte = st.radio("Velg hvordan du vil velge løpere:", options=valg_allterntiver)
         if valgmåte == "Velg renn(annbelfalt)":
@@ -89,12 +109,10 @@ if "hvis_starttider" not in st.session_state:
             st.write("Gå inn på rennet ditt å trykk på deltakere. Derretter kopierer du linken og limer den inn her:")
             st.session_state["url_input"] = st.text_input("Lim inn linken fra EQtiming rennet du skal sekundere løpere fra her:")
             send = st.button("Send", on_click=send_link)
-            '''
-            if send:
-                numbers = url_input.split("/")[-1].split("#")[0]
-                test = url_input.split("/")
-                test_to = url_input.split(".")
-'''
+
+            if "noe_er_fel_med_link" in st.session_state:
+                st.write(st.session_state["noe_er_fel_med_link"])
+
         if valgmåte == "Fil":
             st.write("Trykk på pilen øverst i venste hjørnet å velg Sekundering-med-fil")
         if valgmåte == "Manuell innfylling":
@@ -1090,3 +1108,4 @@ if "hvis_starttider" in st.session_state:
 		except:
 			mongo = "mongo"
 		del st.session_state["antall_løpere"]
+
