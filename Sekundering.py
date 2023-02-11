@@ -260,19 +260,18 @@ if st.session_state["hvis_starttider"] == False:
 					knapp = k + 'knapp'
 					knapp_id = k + 'knapp'	
 					liste_med_løpere = []
+					startnummer = str(reader_obj["Startnummer:"][teller])
+					fornavn = str(reader_obj["Fornavn:"][teller])
+					etternavn = str(reader_obj["Etternavn:"][teller])
+					løper_navn_og_data = fornavn + " " + etternavn + " (start nr:" + startnummer + ")"
+					
 					if "maks_valgt" not in st.session_state:	
-						startnummer = str(reader_obj["Startnummer:"][teller])
-						fornavn = str(reader_obj["Fornavn:"][teller])
-						etternavn = str(reader_obj["Etternavn:"][teller])
-						løper_navn_og_data = fornavn + " " + etternavn + " (start nr:" + startnummer + ")"
-						
 						if løper_navn_og_data not in st.session_state:
 							if løper_navn_og_data in liste_med_løpere:
 								knapp = st.button(løper_navn_og_data + " " + str(teller), disabled=False)
 							else:
 								knapp = st.button(løper_navn_og_data, disabled=False)
 						
-
 						if løper_navn_og_data in st.session_state:
 							if løper_navn_og_data in liste_med_løpere:
 								knapp = st.button(løper_navn_og_data + " " + str(teller), disabled=True)
@@ -285,10 +284,7 @@ if st.session_state["hvis_starttider"] == False:
 
 					n = 1
 					if knapp:
-						startnummer = str(reader_obj["Startnummer:"][teller])
-						fornavn = str(reader_obj["Fornavn:"][teller])
-						etternavn = str(reader_obj["Etternavn:"][teller])
-						st.session_state[startnummer + " " + fornavn + " " + etternavn] = True
+						st.session_state[løper_navn_og_data] = True
 						if st.session_state["løper_nummer"] == 1:
 							løper = "en"
 						elif st.session_state["løper_nummer"] == 2:
