@@ -98,7 +98,6 @@ if st.session_state["hvis_starttider"] == False:
 					if renn_er_valgt:
 						løp_i_dag_er_valgt(playerdata[x]['Id'])
 				x += 1
-			print(renn_i_dag)
 
 
 		if valgmåte == "Link":
@@ -267,8 +266,6 @@ if st.session_state["hvis_starttider"] == False:
 						etternavn = str(reader_obj["Etternavn:"][teller])
 						løper_navn_og_data = fornavn + " " + etternavn + " (start nr:" + startnummer + ")"
 						
-						print(liste_med_løpere)
-
 						if løper_navn_og_data not in st.session_state:
 							if løper_navn_og_data in liste_med_løpere:
 								knapp = st.button(løper_navn_og_data + " " + str(teller), disabled=False)
