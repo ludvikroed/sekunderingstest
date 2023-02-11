@@ -5,52 +5,47 @@ import time
 import requests
 
 if "tider_er_lastet_ned" not in st.session_state:
-    st.session_state["tider_er_lastet_ned"] = False
+	st.session_state["tider_er_lastet_ned"] = False
+	st.session_state["hvis_starttider"] = False
+try:
+	if send_starttider:
+		ok = "ok"
+except:
+	send_starttider = False
 
-def løp_i_dag_er_valgt():
-    try:
-        x = st.session_state["løper_x"]
-        id = playerdata[x]['Id']
-        url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(id)
-        st.session_state["url"] = url
-        response = requests.get(st.session_state["url"])
-        xml_content = response.content
-        data_dict = xmltodict.parse(xml_content)
-        st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
-        st.session_state["link_til_fil"] = url
-        st.session_state["løpe_id"] = id
-        st.session_state["tider_er_lastet_ned"] = True
-    except:
-        st.session_state["feil_med_valg_av_renn"] = "Programmet greide ikke å lese EQtiming sin nettside. Du kan prøve å lime inn linken til rennet."
+def løp_i_dag_er_valgt(id):
+	try:
+		st.session_state["løpe_id"] = id
+		url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(id)
+		response = requests.get(url)
+		xml_content = response.content
+
+		data_dict = xmltodict.parse(xml_content)
+
+		st.session_state["noe_er_fel_med_link"] = "Det var noe som gikk feil med nedlastning av startliste. Du kan prøver å trykke på kanppen på nytt"
+		st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
+		st.session_state["tider_er_lastet_ned"] = True
+	except:
+		st.session_state["feil_med_valg_av_renn"] = "Programmet greide ikke å lese EQtiming sin nettside. Du kan prøve å lime inn linken til rennet."
+	st.experimental_rerun()
 
 def send_link():
-    url_input = st.session_state["url_input"]
-    numbers = url_input.split("/")[-1].split("#")[0]
-    test = url_input.split("/")
+	url_input = st.session_state["url_input"]
+	
+	numbers = url_input.split("/")[-1].split("#")[0]
 
-    if url_input == "https://www.eqtiming.com/no/":
-        st.session_state["noe_er_fel_med_link"] = "Det ser ut som at du bare har lakt inn linken til EQtiming sin forside. Du må legge inn linken til rennet du skal være med på."
-    elif test[1] == "live.eqtiming.com" or test[2] == "live.eqtiming.com" or test[3] == "live.eqtiming.com":
-        if int(numbers):
-            try:
-                st.session_state["løpe_id"] = numbers
-                url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(numbers)
-                st.session_state["url"] = url
-                response = requests.get(st.session_state["url"])
-                xml_content = response.content
-                data_dict = xmltodict.parse(xml_content)
+	if url_input == "https://www.eqtiming.com/no/":
+		st.session_state["noe_er_fel_med_link"] = "Det ser ut som at du bare har lakt inn linken til EQtiming sin forside. Du må legge inn linken til rennet du skal være med på."
+	else:
+		st.session_state["løpe_id"] = numbers
+		url = "https://live.eqtiming.com/api//Report/221?eventId=" + str(numbers)
+		response = requests.get(url)
+		xml_content = response.content
+		data_dict = xmltodict.parse(xml_content)
+		st.session_state["noe_er_fel_med_link"] = "Det var noe som gikk feil med nedlastning av startliste. Du kan prøver å trykke på kanppen på nytt"
+		st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
+		st.session_state["tider_er_lastet_ned"] = True
 
-                st.session_state["løpere_data_list"] = [dict(x) for x in data_dict["startliste"]["start"]]
-                st.session_state["tider_er_lastet_ned"] = True
-                
-            except:
-                st.session_state["noe_er_fel_med_link"] = "det var noe som gikk feil med nedlastning av startliste."
-        else:
-            st.session_state["noe_er_fel_med_link"] = "Programmet greier ikke å lese deltakerene fra linken du har lagt til. Det kan være at EQtiming har endre oppsettet sitt med hvoran man laster ned startlister."
-    else:
-        st.session_state["noe_er_fel_med_link"] = "Det ser ikke ut som at linken du har lagdt ikke er fra inn er fra EQtiming. Hvis dette ikke er riktig kan du sende en meldig til Ludvik Blichfeldt Roed på messenger. "
-
-send_starttider = 0
 
 if "antall_løpere" not in st.session_state:
 	st.session_state.antall_løpere = 0
@@ -64,270 +59,286 @@ startliste_row = []
 
 hvis_løpere = 1
 
-if "hvis_starttider" not in st.session_state:
-    if st.session_state["tider_er_lastet_ned"]  == False:
-        if "feil_med_valg_av_renn" in st.session_state:
-            st.write(st.session_state["feil_med_valg_av_renn"])
-        valg_allterntiver = ["Velg renn(annbelfalt)", "Link", "Fil", "Manuell innfylling"]
-        valgmåte = st.radio("Velg hvordan du vil velge løpere:", options=valg_allterntiver)
-        if valgmåte == "Velg renn(annbelfalt)":
-            url_api = "https://events.eqtiming.com/api/Events?query=&dateFrom=2023-01-01+00%3A00&dateTo=2023-03-31+23%3A59&organizationId=0&regionIds=&levelIds=&sportIds=&take=1500&dateSort=true&desc=false&onlyValidated=false&onlyshowfororganizer=false&organizerIds="
-            payload={}
-            headers = {
-            'authority': 'events.eqtiming.com',
-            'accept': 'application/json, text/javascript, */*; q=0.01',
-            'accept-language': 'nb-NO,nb;q=0.9,no;q=0.8,nn;q=0.7,en-US;q=0.6,en;q=0.5',
-            'content-type': 'application/json',
-            'cookie': 'twk_uuid_585d00c673e3d85bf1414db3=%7B%22uuid%22%3A%221.Swn9202hTjHLCRCPnaRWCDZBCXhRJXZDHQ0NqPyZoVHRzWu3w8flOvf8J9MWtUO5tiMSWuyApuL32BZkA1or5HMLO4rvXUt0S1mm9jaM1gbkyRzMymSiP%22%2C%22version%22%3A3%2C%22domain%22%3A%22eqtiming.com%22%2C%22ts%22%3A1673110787300%7D; cookieconsent_status=dismiss; i18next=nb-NO; EQEventList-1929405894=%7B%22focus%22%3Anull%2C%22from%22%3Anull%2C%22to%22%3Anull%2C%22sportIds%22%3Anull%2C%22query%22%3A%22%22%7D',
-            'eqlivelocale': 'nb-NO',
-            'if-none-match': '"d065b9b5-e902-4189-b5de-2e2072ba08f7"',
-            'referer': 'https://events.eqtiming.com/eventlist?fullscreen=true&fullscreen=true&theme=eqtiming&locale=nb_NO',
-            'sec-ch-ua': '"Not_A Brand";v="99", "Google Chrome";v="109", "Chromium";v="109"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-origin',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-            'x-requested-with': 'XMLHttpRequest'
-            }
-            r = requests.get(url_api, headers=headers)
-            playerdata = r.json()
-
-            current_date = time.strftime("%Y-%m-%d")
-            x = 0
-            st.write("Renn i dag:")
-            for id in playerdata:
-                start_time = playerdata[x]['Starttime']
-                start_time = start_time.split("T")
-                if start_time[0] == current_date:
-                    st.session_state["løper_x"] = x
-                    st.button(playerdata[x]['Name'], on_click=løp_i_dag_er_valgt)            
-                x += 1
-        if valgmåte == "Link":
-            st.write("Kopier linken fra ditt renn på eqtiming")
-            st.write("Gå inn på rennet ditt å trykk på deltakere. Derretter kopierer du linken og limer den inn her:")
-            st.session_state["url_input"] = st.text_input("Lim inn linken fra EQtiming rennet du skal sekundere løpere fra her:")
-            send = st.button("Send", on_click=send_link)
-
-            if "noe_er_fel_med_link" in st.session_state:
-                st.write(st.session_state["noe_er_fel_med_link"])
-
-        if valgmåte == "Fil":
-            st.write("Trykk på pilen øverst i venste hjørnet å velg Sekundering-med-fil")
-        if valgmåte == "Manuell innfylling":
-            st.write("Trykk på pilen øverst i venste hjørnet å velg Sekundering-med-manuell-innfylling")
-
-    hvis_løpere = 0
-
-    if st.session_state["tider_er_lastet_ned"]:
-        if "hvis_starttider" not in st.session_state:
-            tab2, tab3 = st.tabs(["Velg løpere", "Startlister"])
+if st.session_state["hvis_starttider"] == False:
+	if st.session_state["tider_er_lastet_ned"]  == False:
+		if "feil_med_valg_av_renn" in st.session_state:
+			st.write(st.session_state["feil_med_valg_av_renn"])
+		valg_allterntiver = ["Velg renn(annbelfalt)", "Link", "Fil", "Manuell innfylling"]
+		valgmåte = st.radio("Velg hvordan du vil velge løpere:", options=valg_allterntiver)
 		
+		if valgmåte == "Velg renn(annbelfalt)":
+			dato_renn_er = st.date_input("Hvis rennet ditt ikke er i dag kan du velge dato rennet går her:")
+			dato_renn_er = str(dato_renn_er)
+			renn_i_dag =[]
 
-    if st.session_state["tider_er_lastet_ned"]:
-        if "resatt" not in st.session_state:
-            if "Lister_er_lagd" not in st.session_state:
-                x = 0
-                a = 0
-                siste_klasse = 0
-            
-                klasser_dict = {'Startliste:': ''}
-                klasser_dict_to = {'Velg klasse her': '', 'Startliste:': ''}
+			url_api = "https://events.eqtiming.com/api/Events?query=&dateFrom=2023-01-01+00%3A00&dateTo=2023-03-31+23%3A59&organizationId=0&regionIds=&levelIds=&sportIds=&take=1500&dateSort=true&desc=false&onlyValidated=false&onlyshowfororganizer=false&organizerIds="
+			r = requests.get(url_api)
+			playerdata = r.json()
 
-                rows = pd.DataFrame(columns=cols)
-                startliste_row = pd.DataFrame(columns=cols)
+			x = 0
+			a = 0
+			st.session_state["renn_i_dag"] = []
 
-                for i in(st.session_state["løpere_data_list"]):
-                    løper = (st.session_state["løpere_data_list"][x])
-                    fornavn = (løper['@fornavn'])
-                    etternavn = (løper['@etternavn'])
-                    klasse = (løper['@klasse'])
-                    starttid = (løper['@starttid'])
-                    startnr = (løper['@startno'])
+			for id in playerdata:
+				start_time = playerdata[x]['Starttime']
+				start_time = start_time.split("T")
+				if start_time[0] == dato_renn_er:
+					st.session_state["renn_i_dag"].append(playerdata[x]['Id'])
+					st.session_state["løpe_id"] = playerdata[x]['Id']
 
+					if playerdata[x]['Name'] in renn_i_dag:
+						button_name = playerdata[x]['Name'] + " (" + str(a) + ")"
+						a += 1
+					else:
+						button_name = playerdata[x]['Name']
 
-                    if klasse != siste_klasse:
-                        if siste_klasse != 0:
-                            klasser_dict[siste_klasse] = siste_klasse   
-                            klasser_dict_to[siste_klasse] = siste_klasse   
-                            df = pd.DataFrame(rows, columns=cols)
-                            csvfile = siste_klasse + '.csv'
-                            
-                            st.session_state[csvfile] = df
+					renn_er_valgt = st.button(button_name)
 
-                            rows = []
-                            rows = pd.DataFrame(columns=cols)
-                            a += 1
-
-                    rows_ny = pd.DataFrame({"Startnummer:": startnr,
-                                            "Fornavn:": fornavn,
-                                            "Etternavn:": etternavn,
-                                            "Klasse:": klasse,
-                                            "Starttid:": starttid},
-                                            index=["løper"])
-                    
-                    startliste_row_ny = pd.DataFrame({"Startnummer:": startnr,
-                                                        "Fornavn:": fornavn,
-                                                        "Etternavn:": etternavn,
-                                                        "Klasse:": klasse,
-                                                        "Starttid:": starttid},
-                                                        index=["løper"])
-
-                    rows = pd.concat([rows, rows_ny])
-                    
-                    startliste_row = pd.concat([startliste_row, startliste_row_ny])
-                    siste_klasse = klasse
-                    x += 1
-                klasser_dict[siste_klasse] = siste_klasse   
-                klasser_dict_to[siste_klasse] = siste_klasse   
-                klasser_dict[siste_klasse] = siste_klasse   
-                klasser_dict_to[siste_klasse] = siste_klasse   
-                df = pd.DataFrame(rows, columns=cols)
-                csvfile = siste_klasse + '.csv'
-                
-                st.session_state[csvfile] = df
-
-                rows = pd.DataFrame(columns=cols)
-                a += 1
+					renn_i_dag.append(playerdata[x]['Name'])
+					if renn_er_valgt:
+						løp_i_dag_er_valgt(playerdata[x]['Id'])
+				x += 1
+			print(renn_i_dag)
 
 
-                startliste = pd.DataFrame(startliste_row, columns=cols)
-                df = pd.DataFrame(startliste_row, columns=cols)
-                st.session_state["Startliste:.csv"] = df
-                st.session_state["klasser_dict_to"] = klasser_dict_to
-                st.session_state["klasser_dict"] = klasser_dict
-                st.session_state["Lister_er_lagd"] = 1
+		if valgmåte == "Link":
+			st.write("Kopier linken fra ditt renn på eqtiming")
+			st.write("Gå inn på rennet ditt å trykk på deltakere. Derretter kopierer du linken og limer den inn her:")
+			st.session_state["url_input"] = st.text_input("Lim inn linken fra EQtiming rennet du skal sekundere løpere fra her:")
+			send = st.button("Send", on_click=send_link)
 
-        with tab3:
-            klasser_dict_to = st.session_state["klasser_dict_to"]
+			if "noe_er_fel_med_link" in st.session_state:
+				st.write(st.session_state["noe_er_fel_med_link"])
 
-            klasse_som_sekunderes = st.selectbox('Velg hvilken klasse du vil se', klasser_dict_to)
+		if valgmåte == "Fil":
+			st.write("Trykk på pilen øverst i venste hjørnet å velg Sekundering-med-fil")
+		if valgmåte == "Manuell innfylling":
+			st.write("Trykk på pilen øverst i venste hjørnet å velg Sekundering-med-manuell-innfylling")
 
-            if klasse_som_sekunderes != 'Velg klasse her':
-                df = st.session_state[klasse_som_sekunderes + '.csv']
-                st.dataframe(df)
-        if "hvis_starttider" not in st.session_state:
-            with tab2:
-                if st.session_state.antall_løpere >= 1:
-                    antall_løpere = st.session_state.antall_løpere
-                    n = 1
-                    st.subheader("Her er løperne du har valgt for å sekundere: ")
-                    st.write('Det er skjer noen ganger at den siste løperen du har valgt ikke kommer opp her. Hvis du vil se alle løperene du har valgt trykker du på strekene øverst i venste hjørne. Derretter "rerun" dette burde fikse problemet')
-                    if st.session_state.antall_løpere >= 2:
-                        send_starttider = st.button("Start å sekundere løpere")
-                        if send_starttider:
-                            st.session_state["hvis_starttider"] = 1
+	hvis_løpere = 0
 
-                    if "rerun" in st.session_state:
-                        st.write("Du har valgt maks antall av løpere for å sekundere trykk på knappen for å starte å sekundere.")
-                    for i in range(antall_løpere):
-                        if n == 1:
-                            løper = "en"
-                        elif n == 2:
-                            løper = "to"
-                        elif n == 3:
-                            løper = "tre"
-                        elif n == 4:
-                            løper = "fire"
-                        elif n == 5:
-                            løper = "fem"
-                        elif n == 6:
-                            løper = "seks"
-                        n_str = str(n)
-                        st.subheader("Løper " + n_str + ":")
-                        navn = "løper_" + løper + "_navninput"
-                        starttid = "løper_" + løper + "_startinput"
+	if st.session_state["tider_er_lastet_ned"]:
+		tab2, tab3 = st.tabs(["Velg løpere", "Startlister"])
+	
+		if "resatt" not in st.session_state:
+			if "Lister_er_lagd" not in st.session_state:
+				x = 0
+				a = 0
+				siste_klasse = 0
+			
+				klasser_dict = {'Startliste:': ''}
+				klasser_dict_to = {'Velg klasse her': '', 'Startliste:': ''}
 
-                        st.write("Navn: " + st.session_state[navn])
-                        st.write("Starttid: " + st.session_state[starttid])
-                        
-                        n += 1
+				rows = pd.DataFrame(columns=cols)
+				startliste_row = pd.DataFrame(columns=cols)
 
-        with tab2:
-            if "rerun" not in st.session_state:
-                klasser_dict = st.session_state["klasser_dict"]
-                klasse_som_sekunderes_en = st.selectbox('Hvis du bare vil sekundere løpere fra en klasse kan du velge hvilken klasse her. Da vil du bare få opp løpere fra den klassen.', klasser_dict)
-                st.session_state["klasse_som_sekunders"] = klasse_som_sekunderes_en
+				for i in(st.session_state["løpere_data_list"]):
+					løper = (st.session_state["løpere_data_list"][x])
+					fornavn = (løper['@fornavn'])
+					etternavn = (løper['@etternavn'])
+					klasse = (løper['@klasse'])
+					starttid = (løper['@starttid'])
+					startnr = (løper['@startno'])
 
-            reader_obj = st.session_state[st.session_state["klasse_som_sekunders"] + '.csv']
-            if "løper_nummer" not in st.session_state:
-                st.session_state["løper_nummer"] = 1
-            if "forrige_løper" not in st.session_state:
-                st.session_state["forrige_løper"] = 1
 
-            count_row = reader_obj.shape[0]
+					if klasse != siste_klasse:
+						if siste_klasse != 0:
+							klasser_dict[siste_klasse] = siste_klasse   
+							klasser_dict_to[siste_klasse] = siste_klasse   
+							df = pd.DataFrame(rows, columns=cols)
+							csvfile = siste_klasse + '.csv'
+							
+							st.session_state[csvfile] = df
 
-            teller = 0
+							rows = []
+							rows = pd.DataFrame(columns=cols)
+							a += 1
 
-            for row in range(count_row):
-                k = str(row)
+					rows_ny = pd.DataFrame({"Startnummer:": startnr,
+											"Fornavn:": fornavn,
+											"Etternavn:": etternavn,
+											"Klasse:": klasse,
+											"Starttid:": starttid},
+											index=["løper"])
+					
+					startliste_row_ny = pd.DataFrame({"Startnummer:": startnr,
+														"Fornavn:": fornavn,
+														"Etternavn:": etternavn,
+														"Klasse:": klasse,
+														"Starttid:": starttid},
+														index=["løper"])
 
-                knapp = k + 'knapp'
-                knapp_id = k + 'knapp'	
-                
-                if "maks_valgt" not in st.session_state:	
-                    startnummer = str(reader_obj["Startnummer:"][teller])
-                    fornavn = str(reader_obj["Fornavn:"][teller])
-                    etternavn = str(reader_obj["Etternavn:"][teller])
+					rows = pd.concat([rows, rows_ny])
+					
+					startliste_row = pd.concat([startliste_row, startliste_row_ny])
+					siste_klasse = klasse
+					x += 1
+				klasser_dict[siste_klasse] = siste_klasse   
+				klasser_dict_to[siste_klasse] = siste_klasse   
+				klasser_dict[siste_klasse] = siste_klasse   
+				klasser_dict_to[siste_klasse] = siste_klasse   
+				df = pd.DataFrame(rows, columns=cols)
+				csvfile = siste_klasse + '.csv'
+				
+				st.session_state[csvfile] = df
 
-                    knapp = st.button(startnummer + " " + fornavn + " " + etternavn)
+				rows = pd.DataFrame(columns=cols)
+				a += 1
 
-                    if knapp_id in st.session_state:
-                        st.write(reader_obj["Fornavn:"][teller]  + " " + reader_obj["Etternavn:"][teller] + " er valgt")
-                
-                n = 1
-                if knapp:
-                    if st.session_state["løper_nummer"] == 1:
-                        løper = "en"
-                    elif st.session_state["løper_nummer"] == 2:
-                        løper = "to"
-                    elif st.session_state["løper_nummer"] == 3:
-                        løper = "tre"
-                    elif st.session_state["løper_nummer"] == 4:
-                        løper = "fire"
-                    elif st.session_state["løper_nummer"] == 5:
-                        løper = "fem"
-                    elif st.session_state["løper_nummer"] == 6:
-                        løper = "seks"
-                        
-                    elif st.session_state["løper_nummer"] >= 7:
-                        st.session_state["stop"] = 1
-                        if "rerun" not in st.session_state:
-                            st.session_state["rerun"] = 1
-                            st.experimental_rerun()
-                    
-                    
 
-                    if "stop" not in st.session_state:
-                        st.session_state["knapp_for_reset" + løper] = knapp_id
-                        fornavn = reader_obj["Fornavn:"][teller]
-                        etternavn = reader_obj["Etternavn:"][teller]
-                        st.session_state['løper_' + løper + '_navninput'] = fornavn + ' ' + etternavn
-                        st.session_state['løper_' + løper + '_startinput'] = reader_obj["Starttid:"][teller]
-                        st.session_state['løper_' + løper + '_startnr'] = reader_obj["Startnummer:"][teller]
+				startliste = pd.DataFrame(startliste_row, columns=cols)
+				df = pd.DataFrame(startliste_row, columns=cols)
+				st.session_state["Startliste:.csv"] = df
+				st.session_state["klasser_dict_to"] = klasser_dict_to
+				st.session_state["klasser_dict"] = klasser_dict
+				st.session_state["Lister_er_lagd"] = 1
 
-                        st.write(st.session_state['løper_' + løper + '_navninput'], "er valgt")
-                        st.session_state[knapp_id] = 1
-                        
-                        if løper == "en":
-                            st.write("Du har valgt " + løper + " løper. Husk at seks løpere er maks")
-                            st.write("For å starte å sekundere må du velge minst to løpere")
-                            
-                        elif løper == "seks":
-                            st.subheader("Du har valgt maks antall av løpere.")
-                        else:
-                            st.write("Du har valgt " + løper + " løpere. Husk at seks løpere er maks")
-                            st.write("Hvis du ikke vil sekundere flere løpere kan du bla øverst på siden for å starte å sekundere")
+			with tab3:
+				klasser_dict_to = st.session_state["klasser_dict_to"]
 
-                        st.session_state.antall_løpere = st.session_state["løper_nummer"]
-                        if st.session_state["løper_nummer"] == 6:
-                            st.session_state["maks_valgt"] = 1
+				klasse_som_sekunderes = st.selectbox('Velg hvilken klasse du vil se', klasser_dict_to)
 
-                        st.session_state["løper_nummer"] = st.session_state["løper_nummer"] + 1
-                        st.experimental_rerun()
-                teller += 1
-                            
+				if klasse_som_sekunderes != 'Velg klasse her':
+					df = st.session_state[klasse_som_sekunderes + '.csv']
+					st.dataframe(df)
+				
+			with tab2:
+				if st.session_state.antall_løpere >= 1:
+					antall_løpere = st.session_state.antall_løpere
+					n = 1
+					st.subheader("Her er løperne du har valgt for å sekundere: ")
+					if st.session_state.antall_løpere >= 2:
+						send_starttider = st.button("Start å sekundere løpere")
+						if send_starttider:
+							st.session_state["hvis_starttider"] = True
+
+				if "rerun" in st.session_state:
+					st.write("Du har valgt maks antall av løpere for å sekundere trykk på knappen for å starte å sekundere.")
+				for i in range(st.session_state.antall_løpere):
+					if n == 1:
+						løper = "en"
+					elif n == 2:
+						løper = "to"
+					elif n == 3:
+						løper = "tre"
+					elif n == 4:
+						løper = "fire"
+					elif n == 5:
+						løper = "fem"
+					elif n == 6:
+						løper = "seks"
+					n_str = str(n)
+					st.subheader("Løper " + n_str + ":")
+					navn = "løper_" + løper + "_navninput"
+					starttid = "løper_" + løper + "_startinput"
+
+					st.write("Navn: " + st.session_state[navn])
+					st.write("Starttid: " + st.session_state[starttid])
+					
+					n += 1
+				if st.session_state["antall_løpere"] != 6:
+					st.subheader("Velg hvilke løpere du vil sekundere:")
+					st.write("Husk at seks løpere er maks.")
+					st.write("Tallet du ser er startnummeret til løperen.")
+
+				if "rerun" not in st.session_state:
+					klasser_dict = st.session_state["klasser_dict"]
+					klasse_som_sekunderes_en = st.selectbox('Hvis du bare vil sekundere løpere fra en klasse kan du velge hvilken klasse her.', klasser_dict)
+					st.session_state["klasse_som_sekunders"] = klasse_som_sekunderes_en
+
+				reader_obj = st.session_state[st.session_state["klasse_som_sekunders"] + '.csv']
+				if "løper_nummer" not in st.session_state:
+					st.session_state["løper_nummer"] = 1
+				if "forrige_løper" not in st.session_state:
+					st.session_state["forrige_løper"] = 1
+
+				count_row = reader_obj.shape[0]
+				teller = 0
+				
+				for row in range(count_row):
+					k = str(row)
+
+					knapp = k + 'knapp'
+					knapp_id = k + 'knapp'	
+					liste_med_løpere = []
+					if "maks_valgt" not in st.session_state:	
+						startnummer = str(reader_obj["Startnummer:"][teller])
+						fornavn = str(reader_obj["Fornavn:"][teller])
+						etternavn = str(reader_obj["Etternavn:"][teller])
+						løper_navn_og_data = fornavn + " " + etternavn + " (start nr:" + startnummer + ")"
+						
+						print(liste_med_løpere)
+
+						if løper_navn_og_data not in st.session_state:
+							if løper_navn_og_data in liste_med_løpere:
+								knapp = st.button(løper_navn_og_data + " " + str(teller), disabled=False)
+							else:
+								knapp = st.button(løper_navn_og_data, disabled=False)
+						
+
+						if løper_navn_og_data in st.session_state:
+							if løper_navn_og_data in liste_med_løpere:
+								knapp = st.button(løper_navn_og_data + " " + str(teller), disabled=True)
+								st.write(løper_navn_og_data + " er valgt")
+							else:
+								knapp = st.button(løper_navn_og_data, disabled=True)
+								st.write(løper_navn_og_data + " er valgt")
+
+						liste_med_løpere.append(løper_navn_og_data)
+
+					n = 1
+					if knapp:
+						startnummer = str(reader_obj["Startnummer:"][teller])
+						fornavn = str(reader_obj["Fornavn:"][teller])
+						etternavn = str(reader_obj["Etternavn:"][teller])
+						st.session_state[startnummer + " " + fornavn + " " + etternavn] = True
+						if st.session_state["løper_nummer"] == 1:
+							løper = "en"
+						elif st.session_state["løper_nummer"] == 2:
+							løper = "to"
+						elif st.session_state["løper_nummer"] == 3:
+							løper = "tre"
+						elif st.session_state["løper_nummer"] == 4:
+							løper = "fire"
+						elif st.session_state["løper_nummer"] == 5:
+							løper = "fem"
+						elif st.session_state["løper_nummer"] == 6:
+							løper = "seks"
+							
+						elif st.session_state["løper_nummer"] >= 7:
+							st.session_state["stop"] = 1
+							if "rerun" not in st.session_state:
+								st.session_state["rerun"] = 1
+								st.experimental_rerun()
+
+						if "stop" not in st.session_state:
+							st.session_state["knapp_for_reset" + løper] = knapp_id
+							fornavn = reader_obj["Fornavn:"][teller]
+							etternavn = reader_obj["Etternavn:"][teller]
+							st.session_state['løper_' + løper + '_navninput'] = fornavn + ' ' + etternavn
+							st.session_state['løper_' + løper + '_startinput'] = reader_obj["Starttid:"][teller]
+							st.session_state['løper_' + løper + '_startnr'] = reader_obj["Startnummer:"][teller]
+
+							st.write(st.session_state['løper_' + løper + '_navninput'], "er valgt")
+							st.session_state[knapp_id] = 1
+							
+							if løper == "en":
+								st.write("Du har valgt " + løper + " løper. Husk at seks løpere er maks")
+								st.write("For å starte å sekundere må du velge minst to løpere")
+
+							elif løper == "seks":
+								st.subheader("Du har valgt maks antall av løpere.")
+							else:
+								st.write("Du har valgt " + løper + " løpere. Husk at seks løpere er maks")
+								st.write("Hvis du ikke vil sekundere flere løpere kan du bla øverst på siden for å starte å sekundere")
+
+							st.session_state.antall_løpere = st.session_state["løper_nummer"]
+							if st.session_state["løper_nummer"] == 6:
+								st.session_state["maks_valgt"] = 1
+
+							st.session_state["løper_nummer"] = st.session_state["løper_nummer"] + 1
+							st.experimental_rerun()
+					teller += 1
 
 runde_nr = 1
 
@@ -387,101 +398,87 @@ if send_starttider:
 		løperEnNavn = løper_toNavn
 		løperToNavn= løper_enNavn
 		return løperEn, løperTo, løperEnNavn, løperToNavn, løperEnStrNr, løperToStrNr
-
-	if antall_løpere >= 2:
-		if antall_løpere == 1:
+	
+	n = 1
+	for i in range(antall_løpere):
+		if n == 1:
 			løper = "en"
-		elif antall_løpere == 2:
+			løper_start = regn_starttid(løper_en_startinput)
+		elif n == 2:
 			løper = "to"
-		elif antall_løpere == 3:
+			løper_start = regn_starttid(løper_to_startinput)
+		elif n == 3:
 			løper = "tre"
-		elif antall_løpere == 4:
+			løper_start = regn_starttid(løper_tre_startinput)
+		elif n == 4:
 			løper = "fire"
-		elif antall_løpere == 5:
+			løper_start = regn_starttid(løper_fire_startinput)
+		elif n == 5:
 			løper = "fem"
-		elif antall_løpere == 6:
+			løper_start = regn_starttid(løper_fem_startinput)
+		elif n == 6:
 			løper = "seks"
-		
-		n = 1
-		for i in range(antall_løpere):
-			if n == 1:
-				løper = "en"
-				løper_start = regn_starttid(løper_en_startinput)
-			elif n == 2:
-				løper = "to"
-				løper_start = regn_starttid(løper_to_startinput)
-			elif n == 3:
-				løper = "tre"
-				løper_start = regn_starttid(løper_tre_startinput)
-			elif n == 4:
-				løper = "fire"
-				løper_start = regn_starttid(løper_fire_startinput)
-			elif n == 5:
-				løper = "fem"
-				løper_start = regn_starttid(løper_fem_startinput)
-			elif n == 6:
-				løper = "seks"
-				løper_start = regn_starttid(løper_seks_startinput)
-			st.session_state["løper_" + løper + "_start"] = løper_start
-			st.write(løper)
-			st.session_state["løper_" + løper + "_start"]
-			n += 1
+			løper_start = regn_starttid(løper_seks_startinput)
+		st.session_state["løper_" + løper + "_start"] = løper_start
+		st.write(løper, "hallo")
+		st.session_state["løper_" + løper + "_start"]
+		n += 1
 
-		def rekkefølge_feil_en(en, to):
-			if st.session_state["løper_" + en + "_start"] > st.session_state["løper_" + to + "_start"]:
-				st.write(st.session_state['løper_' + to + '_navninput'])
+	def rekkefølge_feil_en(en, to):
+		if st.session_state["løper_" + en + "_start"] > st.session_state["løper_" + to + "_start"]:
+			st.write(st.session_state['løper_' + to + '_navninput'])
 
-				omregning = rekkefølge_feil(st.session_state["løper_" + en + "_start"], st.session_state["løper_" + to + "_start"], st.session_state["løper_" + en + "_navninput"], st.session_state["løper_" + to + "_navninput"], st.session_state['løper_' + en + '_startnr'], st.session_state['løper_' + to + '_startnr'])
-				st.session_state["løper_" + en + "_start"] = omregning[0]
-				st.session_state["løper_" + to + "_start"] = omregning[1]
-				st.session_state['løper_' + en + '_navninput'] = omregning[2]
-				st.session_state['løper_' + to + '_navninput'] = omregning[3]
-				st.session_state['løper_' + en + '_startnr'] = omregning[4]
-				st.session_state['løper_' + to + '_startnr'] = omregning[5]
-				st.write(st.session_state['løper_' + to + '_navninput'])
+			omregning = rekkefølge_feil(st.session_state["løper_" + en + "_start"], st.session_state["løper_" + to + "_start"], st.session_state["løper_" + en + "_navninput"], st.session_state["løper_" + to + "_navninput"], st.session_state['løper_' + en + '_startnr'], st.session_state['løper_' + to + '_startnr'])
+			st.session_state["løper_" + en + "_start"] = omregning[0]
+			st.session_state["løper_" + to + "_start"] = omregning[1]
+			st.session_state['løper_' + en + '_navninput'] = omregning[2]
+			st.session_state['løper_' + to + '_navninput'] = omregning[3]
+			st.session_state['løper_' + en + '_startnr'] = omregning[4]
+			st.session_state['løper_' + to + '_startnr'] = omregning[5]
+			st.write(st.session_state['løper_' + to + '_navninput'])
 
-		for i in range(5):
-			rekkefølge_feil_en("en", "to")
-			if antall_løpere > 2:
-				rekkefølge_feil_en("en", "tre")
-				rekkefølge_feil_en("to", "tre")
-			if antall_løpere > 3:
-				rekkefølge_feil_en("en", "fire")
-				rekkefølge_feil_en("to", "fire")
-				rekkefølge_feil_en("tre", "fire")
-			if antall_løpere > 4:
-				rekkefølge_feil_en("en", "fem")
-				rekkefølge_feil_en("to", "fem")
-				rekkefølge_feil_en("tre", "fem")
-				rekkefølge_feil_en("fire", "fem")
-			if antall_løpere > 5:
-				rekkefølge_feil_en("en", "seks")
-				rekkefølge_feil_en("to", "seks")
-				rekkefølge_feil_en("tre", "seks")
-				rekkefølge_feil_en("fire", "seks")
-				rekkefølge_feil_en("fem", "seks")
+	for i in range(5):
+		rekkefølge_feil_en("en", "to")
+		if antall_løpere > 2:
+			rekkefølge_feil_en("en", "tre")
+			rekkefølge_feil_en("to", "tre")
+		if antall_løpere > 3:
+			rekkefølge_feil_en("en", "fire")
+			rekkefølge_feil_en("to", "fire")
+			rekkefølge_feil_en("tre", "fire")
+		if antall_løpere > 4:
+			rekkefølge_feil_en("en", "fem")
+			rekkefølge_feil_en("to", "fem")
+			rekkefølge_feil_en("tre", "fem")
+			rekkefølge_feil_en("fire", "fem")
+		if antall_løpere > 5:
+			rekkefølge_feil_en("en", "seks")
+			rekkefølge_feil_en("to", "seks")
+			rekkefølge_feil_en("tre", "seks")
+			rekkefølge_feil_en("fire", "seks")
+			rekkefølge_feil_en("fem", "seks")
 	st.experimental_rerun()
 
 def løper_passerer(løper_start_tid):
-    løper_pa_tid= time.time()
-    løper_tid = løper_pa_tid - løper_start_tid
-    return (løper_tid)
+	løper_pa_tid= time.time()
+	løper_tid = løper_pa_tid - løper_start_tid
+	return (løper_tid)
 
 def regn_forskjell(start_en, start_to):
-    forskjell = start_to - start_en 
-    return (forskjell)
+	forskjell = start_to - start_en 
+	return (forskjell)
 
 def regn_negativ_positiv(forskjell):
-  if forskjell < 0:
-    bak_foran = ' foran '
+	if forskjell < 0:
+		bak_foran = ' foran '
 
-  if forskjell == 0:
-    bak_foran = ' foran '
+	if forskjell == 0:
+		bak_foran = ' foran '
 
-  if forskjell > 0:
-    bak_foran = ' bak '
+	if forskjell > 0:
+		bak_foran = ' bak '
 
-  return(bak_foran)
+	return(bak_foran)
 
 def skriv_to_løpere(passering_løper_en, passering_løper_to, løper_en_navn, løper_to_navn):
 	forskjell_på_en_to = regn_forskjell(passering_løper_en, passering_løper_to)
@@ -496,7 +493,7 @@ def skriv_to_løpere(passering_løper_en, passering_løper_to, løper_en_navn, l
 	skriv = løper_to_navn + " er " + str(forskjell_på_en_to) + " sekunder" + bak_foran + løper_en_navn
 	return skriv
 
-if "hvis_starttider" in st.session_state:
+if st.session_state["hvis_starttider"]:
 	løper_en_navninput = st.session_state['løper_en_navninput']
 	løper_to_navninput = st.session_state['løper_to_navninput']
 	løper_en_startinput = st.session_state['løper_en_startinput']
@@ -1013,99 +1010,3 @@ if "hvis_starttider" in st.session_state:
 			else:
 				break
 			n += 1
-		
-
-	st.write('')
-	st.write('')
-	st.write("Trykk på knappen under to ganger for å tilbakestille løperne." )
-	st.write("Advarsel: Du vil bli nødt til å legge inn alle løperne på nytt. Du må ikke legge inn link til rennet på nytt.")
-	tilbake = st.button('Reset løpere')
-	if tilbake:
-		st.session_state["resatt"] = 1
-		a = st.session_state["antall_løpere"]
-		n = 1
-		del st.session_state["hvis_starttider"]
-
-		for i in range(a):
-			
-			if antall_løpere + 1 < n:
-				break
-			if n == 1:
-				løper = "en"
-				knapper = st.session_state["knapp_for_reseten"]
-				del st.session_state[knapper]
-			elif n == 2:
-				løper = "to"
-				knapper = st.session_state["knapp_for_resetto"]
-				del st.session_state[knapper]
-			elif n == 3:
-				løper = "tre"
-				knapper = st.session_state["knapp_for_resettre"]
-				del st.session_state[knapper]
-			elif n == 4:
-				løper = "fire"
-				knapper = st.session_state["knapp_for_resetfire"]
-				del st.session_state[knapper]
-			elif n == 5:
-				løper = "fem"
-				knapper = st.session_state["knapp_for_resetfem"]
-				del st.session_state[knapper]
-			elif n == 6:
-				løper == "seks"
-				knapper = st.session_state["knapp_for_resetseks"]
-				del st.session_state[knapper]
-
-			try:
-				del st.session_state["siste_passering_løper_" + løper]
-			except:
-				mongo = "mongo"
-			try:
-				del st.session_state["løper_" + løper + "_navninput"]
-			except:
-				mongo = "mongo"
-			try:
-				del st.session_state["løper_" + løper + "_startinput"]
-			except:
-				mongo = "mongo"
-			try:
-				del st.session_state["løper_" + løper + "_start"]
-			except:
-				mongo = "mongo"
-			try:
-				del st.session_state["løper_" + løper + "_startnr"]
-			except:
-				mongo = "mongo"
-
-			n += 1
-			
-		
-		try:
-			del st.session_state["maks_valgt"]
-		except:
-			mongo = "mongo"
-
-		try:
-			del st.session_state["stop"]
-		except:
-			mongo = "mongo"
-
-		del st.session_state["rerun"]
-		del st.session_state["løper_nummer"]
-
-		antall_løpere = st.session_state["antall_løpere"]
-		if antall_løpere == 2:
-			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"])
-		elif antall_løpere == 3:
-			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"], st.session_state["lapping_for_tre"])
-		elif antall_løpere == 4:
-			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"], st.session_state["lapping_for_tre"], st.session_state["lapping_for_fire"])
-		elif antall_løpere == 5:
-			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"], st.session_state["lapping_for_tre"], st.session_state["lapping_for_fire"], st.session_state["lapping_for_fem"])
-		elif antall_løpere == 6:
-			highest_number = max(st.session_state["lapping_for_en"], st.session_state["lapping_for_to"], st.session_state["lapping_for_tre"], st.session_state["lapping_for_fire"], st.session_state["lapping_for_fem"], st.session_state["lapping_for_seks"])
-		try:
-			st.session_state["lapping_for_en"] = st.session_state["lapping_for_to"] = st.session_state["lapping_for_tre"] = st.session_state["lapping_for_fire"] = st.session_state["lapping_for_fem"] = st.session_state["lapping_for_seks"] = highest_number
-		except:
-			mongo = "mongo"
-		del st.session_state["antall_løpere"]
-
