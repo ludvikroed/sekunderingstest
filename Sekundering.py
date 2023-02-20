@@ -1,4 +1,3 @@
-from operator import index
 import streamlit as st
 import xmltodict
 import pandas as pd
@@ -334,7 +333,7 @@ if st.session_state["hvis_starttider"] == False:
 									st.write("Fant ingen " + search_term)
 
 						st.session_state["klasse_som_sekunders"] = klasse_som_sekunderes_en
-						if x is not 1:
+						if x != 1:
 							reader_obj = result
 				if "løper_nummer" not in st.session_state:
 					st.session_state["løper_nummer"] = 1
