@@ -74,16 +74,6 @@ if st.session_state["hvis_starttider"] == False:
 			dato_renn_er = st.date_input("Hvis rennet ditt ikke er i dag kan du velge dato rennet går her:")
 			dato_renn_er = str(dato_renn_er)
 
-			idretter = st.radio("Idrett", ["Alle", "Cross Country Skiing", "Skiskyting"])
-
-			if idretter == "Cross Country Skiing":
-				st.radio("langrenn", ["alle", "turrenn"])
-			
-
-			
-
-
-
 			with st.expander("Velg hva som skal hvises på knappene:"):
 				KnappHvisArrangereneklubb = st.checkbox("Arrangerene klubb")
 				KnappHvisSted = st.checkbox("Sted")
@@ -1032,5 +1022,3 @@ if st.session_state["hvis_starttider"]:
 			else:
 				break
 			n += 1
-
-
