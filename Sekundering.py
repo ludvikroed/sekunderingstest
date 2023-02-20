@@ -300,7 +300,7 @@ if st.session_state["hvis_starttider"] == False:
 						with st.expander("Søk"):
 							search_term = st.text_input("Søk:", label_visibility="collapsed")
 							type_søk = st.selectbox("Velg hva du vil søke etter",["Fornavn:", "Etternavn:", "Team:", "Startnummer:", "Starttid:"] )
-							df = st.session_state["Startliste:.csv"]
+							df = st.session_state[klasse_som_sekunderes_en + ".csv"]
 							result = df[df[type_søk].str.lower().str.contains(search_term.lower())]
 							x = 0
 
