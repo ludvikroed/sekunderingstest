@@ -4,6 +4,8 @@ import pandas as pd
 import time
 import requests
 
+
+
 if "tider_er_lastet_ned" not in st.session_state:
 	st.session_state["tider_er_lastet_ned"] = False
 	st.session_state["hvis_starttider"] = False
@@ -63,16 +65,49 @@ if st.session_state["hvis_starttider"] == False:
 	if st.session_state["tider_er_lastet_ned"]  == False:
 		if "feil_med_valg_av_renn" in st.session_state:
 			st.write(st.session_state["feil_med_valg_av_renn"])
-		valg_allterntiver = ["Velg renn(annbelfalt)", "Link", "Fil", "Manuell innfylling"]
-		valgmåte = st.radio("Velg hvordan du vil velge løpere:", options=valg_allterntiver)
-		
-		if valgmåte == "Velg renn(annbelfalt)":
+		with st.expander("Velg hvordan du vil sekundere løpere"):
+			valg_allterntiver = ["Velg renn(anbelfalt)", "Link", "Fil", "Manuell innfylling"]
+			valgmåte = st.radio("Velg hvordan du vil velge løpere:", options=valg_allterntiver)
+
+		if valgmåte == "Velg renn(anbelfalt)":
+			
 			dato_renn_er = st.date_input("Hvis rennet ditt ikke er i dag kan du velge dato rennet går her:")
 			dato_renn_er = str(dato_renn_er)
-			renn_i_dag =[]
 
+			idretter = st.radio("Idrett", ["Alle", "Cross Country Skiing", "Skiskyting"])
+
+			if idretter == "Cross Country Skiing":
+				st.radio("langrenn", ["alle", "turrenn"])
+			
+
+			
+
+
+
+			with st.expander("Velg hva som skal hvises på knappene:"):
+				KnappHvisArrangereneklubb = st.checkbox("Arrangerene klubb")
+				KnappHvisSted = st.checkbox("Sted")
+				
 			url_api = "https://events.eqtiming.com/api/Events?query=&dateFrom=2023-01-01+00%3A00&dateTo=2023-03-31+23%3A59&organizationId=0&regionIds=&levelIds=&sportIds=&take=1500&dateSort=true&desc=false&onlyValidated=false&onlyshowfororganizer=false&organizerIds="
-			r = requests.get(url_api)
+			headers = {
+			'authority': 'events.eqtiming.com',
+			'accept': 'application/json, text/javascript, */*; q=0.01',
+			'accept-language': 'nb-NO,nb;q=0.9,no;q=0.8,nn;q=0.7,en-US;q=0.6,en;q=0.5',
+			'content-type': 'application/json',
+			'cookie': 'twk_uuid_585d00c673e3d85bf1414db3=%7B%22uuid%22%3A%221.Swn9202hTjHLCRCPnaRWCDZBCXhRJXZDHQ0NqPyZoVHRzWu3w8flOvf8J9MWtUO5tiMSWuyApuL32BZkA1or5HMLO4rvXUt0S1mm9jaM1gbkyRzMymSiP%22%2C%22version%22%3A3%2C%22domain%22%3A%22eqtiming.com%22%2C%22ts%22%3A1673110787300%7D; cookieconsent_status=dismiss; i18next=nb-NO; EQEventList-1929405894=%7B%22focus%22%3Anull%2C%22from%22%3Anull%2C%22to%22%3Anull%2C%22sportIds%22%3Anull%2C%22query%22%3A%22%22%7D',
+			'eqlivelocale': 'nb-NO',
+			'if-none-match': '"d065b9b5-e902-4189-b5de-2e2072ba08f7"',
+			'referer': 'https://events.eqtiming.com/eventlist?fullscreen=true&fullscreen=true&theme=eqtiming&locale=nb_NO',
+			'sec-ch-ua': '"Not_A Brand";v="99", "Google Chrome";v="109", "Chromium";v="109"',
+			'sec-ch-ua-mobile': '?0',
+			'sec-ch-ua-platform': '"macOS"',
+			'sec-fetch-dest': 'empty',
+			'sec-fetch-mode': 'cors',
+			'sec-fetch-site': 'same-origin',
+			'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+			'x-requested-with': 'XMLHttpRequest'
+			}
+			r = requests.get(url_api, headers=headers)
 			playerdata = r.json()
 
 			x = 0
@@ -83,18 +118,24 @@ if st.session_state["hvis_starttider"] == False:
 				start_time = playerdata[x]['Starttime']
 				start_time = start_time.split("T")
 				if start_time[0] == dato_renn_er:
+					a += 1
 					st.session_state["renn_i_dag"].append(playerdata[x]['Id'])
 					st.session_state["løpe_id"] = playerdata[x]['Id']
 
-					if playerdata[x]['Name'] in renn_i_dag:
-						button_name = playerdata[x]['Name'] + " (" + str(a) + ")"
-						a += 1
-					else:
-						button_name = playerdata[x]['Name']
+					knappSomSes = playerdata[x]['Name']
 
-					renn_er_valgt = st.button(button_name)
-
-					renn_i_dag.append(playerdata[x]['Name'])
+					if KnappHvisArrangereneklubb:
+						klubb = playerdata[x]['Organizer']
+						klubb = klubb["Name"]
+						knappSomSes = knappSomSes + " (Klubb: " + klubb + ")"
+					
+					if KnappHvisSted:
+						sted = playerdata[x]["City"]
+						sted = sted["Name"]
+						knappSomSes = knappSomSes + " sted: " + sted
+						
+					renn_er_valgt = st.button( "(" + str(a) + ") " + knappSomSes)
+					
 					if renn_er_valgt:
 						løp_i_dag_er_valgt(playerdata[x]['Id'])
 				x += 1
@@ -121,16 +162,19 @@ if st.session_state["hvis_starttider"] == False:
 	
 		if "resatt" not in st.session_state:
 			if "Lister_er_lagd" not in st.session_state:
-				x = 0
-				a = 0
-				siste_klasse = 0
-			
 				klasser_dict = {'Startliste:': ''}
 				klasser_dict_to = {'Velg klasse her': '', 'Startliste:': ''}
+				
+	
+				st.session_state["klasser_dict_to"] = klasser_dict_to
+				st.session_state["klasser_dict"] = klasser_dict
+
+				x = 0
+				a = 0
 
 				rows = pd.DataFrame(columns=cols)
 				startliste_row = pd.DataFrame(columns=cols)
-
+				
 				for i in(st.session_state["løpere_data_list"]):
 					løper = (st.session_state["løpere_data_list"][x])
 					fornavn = (løper['@fornavn'])
@@ -138,28 +182,21 @@ if st.session_state["hvis_starttider"] == False:
 					klasse = (løper['@klasse'])
 					starttid = (løper['@starttid'])
 					startnr = (løper['@startno'])
+					csvid = klasse + ".csv"
 
+					if klasse not in klasser_dict:
+						klasser_dict[klasse] = klasse
+						klasser_dict_to[klasse] = klasse  
 
-					if klasse != siste_klasse:
-						if siste_klasse != 0:
-							klasser_dict[siste_klasse] = siste_klasse   
-							klasser_dict_to[siste_klasse] = siste_klasse   
-							df = pd.DataFrame(rows, columns=cols)
-							csvfile = siste_klasse + '.csv'
-							
-							st.session_state[csvfile] = df
-
-							rows = []
-							rows = pd.DataFrame(columns=cols)
-							a += 1
-
+						st.session_state[csvid] = pd.DataFrame(columns=cols)
+		
 					rows_ny = pd.DataFrame({"Startnummer:": startnr,
 											"Fornavn:": fornavn,
 											"Etternavn:": etternavn,
 											"Klasse:": klasse,
 											"Starttid:": starttid},
 											index=["løper"])
-					
+
 					startliste_row_ny = pd.DataFrame({"Startnummer:": startnr,
 														"Fornavn:": fornavn,
 														"Etternavn:": etternavn,
@@ -167,30 +204,18 @@ if st.session_state["hvis_starttider"] == False:
 														"Starttid:": starttid},
 														index=["løper"])
 
-					rows = pd.concat([rows, rows_ny])
+
+					st.session_state[csvid] = pd.concat([st.session_state[csvid], rows_ny])
 					
 					startliste_row = pd.concat([startliste_row, startliste_row_ny])
-					siste_klasse = klasse
 					x += 1
-				klasser_dict[siste_klasse] = siste_klasse   
-				klasser_dict_to[siste_klasse] = siste_klasse   
-				klasser_dict[siste_klasse] = siste_klasse   
-				klasser_dict_to[siste_klasse] = siste_klasse   
-				df = pd.DataFrame(rows, columns=cols)
-				csvfile = siste_klasse + '.csv'
+
+				df = pd.DataFrame(rows_ny, columns=cols)
+				st.session_state[klasse + '.csv'] = df
 				
-				st.session_state[csvfile] = df
-
-				rows = pd.DataFrame(columns=cols)
-				a += 1
-
-
 				startliste = pd.DataFrame(startliste_row, columns=cols)
-				df = pd.DataFrame(startliste_row, columns=cols)
-				st.session_state["Startliste:.csv"] = df
-				st.session_state["klasser_dict_to"] = klasser_dict_to
-				st.session_state["klasser_dict"] = klasser_dict
-				st.session_state["Lister_er_lagd"] = 1
+				st.session_state["Startliste:.csv"] = startliste
+				st.session_state["Lister_er_lagd"] = True
 
 			with tab3:
 				klasser_dict_to = st.session_state["klasser_dict_to"]
@@ -263,15 +288,16 @@ if st.session_state["hvis_starttider"] == False:
 					startnummer = str(reader_obj["Startnummer:"][teller])
 					fornavn = str(reader_obj["Fornavn:"][teller])
 					etternavn = str(reader_obj["Etternavn:"][teller])
-					løper_navn_og_data = fornavn + " " + etternavn + " (start nr:" + startnummer + ")"
-					
+					løper_navn_og_data = startnummer + " " + fornavn + " " + etternavn
 					if "maks_valgt" not in st.session_state:	
+
 						if løper_navn_og_data not in st.session_state:
 							if løper_navn_og_data in liste_med_løpere:
 								knapp = st.button(løper_navn_og_data + " " + str(teller), disabled=False)
 							else:
 								knapp = st.button(løper_navn_og_data, disabled=False)
 						
+
 						if løper_navn_og_data in st.session_state:
 							if løper_navn_og_data in liste_med_løpere:
 								knapp = st.button(løper_navn_og_data + " " + str(teller), disabled=True)
@@ -284,6 +310,9 @@ if st.session_state["hvis_starttider"] == False:
 
 					n = 1
 					if knapp:
+						startnummer = str(reader_obj["Startnummer:"][teller])
+						fornavn = str(reader_obj["Fornavn:"][teller])
+						etternavn = str(reader_obj["Etternavn:"][teller])
 						st.session_state[løper_navn_og_data] = True
 						if st.session_state["løper_nummer"] == 1:
 							løper = "en"
@@ -299,7 +328,7 @@ if st.session_state["hvis_starttider"] == False:
 							løper = "seks"
 							
 						elif st.session_state["løper_nummer"] >= 7:
-							st.session_state["stop"] = 1
+							st.session_state["stop"] = True
 							if "rerun" not in st.session_state:
 								st.session_state["rerun"] = 1
 								st.experimental_rerun()
@@ -1003,3 +1032,5 @@ if st.session_state["hvis_starttider"]:
 			else:
 				break
 			n += 1
+
+
