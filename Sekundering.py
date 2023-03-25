@@ -42,26 +42,9 @@ startliste_row = []
 hvis_løpere = 1
 
 def get_json_data():
-	headers = {
-	'authority': 'events.eqtiming.com',
-	'accept': 'application/json, text/javascript, */*; q=0.01',
-	'accept-language': 'nb-NO,nb;q=0.9,no;q=0.8,nn;q=0.7,en-US;q=0.6,en;q=0.5',
-	'content-type': 'application/json',
-	'cookie': 'twk_uuid_585d00c673e3d85bf1414db3=%7B%22uuid%22%3A%221.Swn9202hTjHLCRCPnaRWCDZBCXhRJXZDHQ0NqPyZoVHRzWu3w8flOvf8J9MWtUO5tiMSWuyApuL32BZkA1or5HMLO4rvXUt0S1mm9jaM1gbkyRzMymSiP%22%2C%22version%22%3A3%2C%22domain%22%3A%22eqtiming.com%22%2C%22ts%22%3A1673110787300%7D; cookieconsent_status=dismiss; i18next=nb-NO; EQEventList-1929405894=%7B%22focus%22%3Anull%2C%22from%22%3Anull%2C%22to%22%3Anull%2C%22sportIds%22%3Anull%2C%22query%22%3A%22%22%7D',
-	'eqlivelocale': 'nb-NO',
-	'if-none-match': '"d065b9b5-e902-4189-b5de-2e2072ba08f7"',
-	'referer': 'https://events.eqtiming.com/eventlist?fullscreen=true&fullscreen=true&theme=eqtiming&locale=nb_NO',
-	'sec-ch-ua': '"Not_A Brand";v="99", "Google Chrome";v="109", "Chromium";v="109"',
-	'sec-ch-ua-mobile': '?0',
-	'sec-ch-ua-platform': '"macOS"',
-	'sec-fetch-dest': 'empty',
-	'sec-fetch-mode': 'cors',
-	'sec-fetch-site': 'same-origin',
-	'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-	'x-requested-with': 'XMLHttpRequest'
-	}
-	url = "https://events.eqtiming.com/api/Events?query=&dateFrom=2023-01-01+00%3A00&dateTo=2023-03-31+23%3A59&organizationId=0&regionIds=&levelIds=&sportIds=&take=1500&dateSort=true&desc=false&onlyValidated=false&onlyshowfororganizer=false&organizerIds="
-	r = requests.get(url, headers=headers)
+
+	url = "https://events.eqtiming.com/api/Events?query=&dateFrom=2023-01-01+00%3A00&dateTo=2023-05-31+23%3A59&organizationId=0&regionIds=&levelIds=&sportIds=&take=1500&dateSort=true&desc=false&onlyValidated=false&onlyshowfororganizer=false&organizerIds="
+	r = requests.get(url)
 	json_data = r.json()
 
 	x = 0
